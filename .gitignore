@@ -1,6 +1,7 @@
 .ccls-cache
 build
 compile_commands.json
+test.hv
 
 # Prerequisites
 *.d
