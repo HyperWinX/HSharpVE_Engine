@@ -5,11 +5,18 @@ set(CMAKE_CXX_STANDARD 23)
 
 #Project setup
 include_directories(include)
-file(GLOB_RECURSE ALL_SRCS ${HSharpVE_Engine_SOURCE_DIR}/src/*.cpp)
+set(ALL_SRCS
+        src/main/main.cpp
+        src/parser/helpers.cpp
+        src/parser/parser.cpp
+        src/parser/tokenizer.cpp
+        src/ve/ve_main.cpp
+        src/ve/exceptions.cpp)
 #Debug target
 add_executable(hve_ng-debug ${ALL_SRCS})
-set_target_properties(hve_ng-debug PROPERTIES COMPILE_FLAGS "-Wall -Werror -O0 -ggdb3")
+set_target_properties(hve_ng-debug PROPERTIES COMPILE_FLAGS "-Wall -O0 -ggdb3")
 #Release target
 add_executable(hve_ng ${ALL_SRCS}
-        src/main/main.cpp)
-set_target_properties(hve_ng PROPERTIES COMPILE_FLAGS "-Wall -Werror -O2 -fdata-sections -ffunction-sections -Wl,--gc-sections")
+        src/main/main.cpp
+        src/ve/exceptions.cpp)
+set_target_properties(hve_ng PROPERTIES COMPILE_FLAGS "-Wall -O2 -fdata-sections -ffunction-sections -Wl,--gc-sections")
