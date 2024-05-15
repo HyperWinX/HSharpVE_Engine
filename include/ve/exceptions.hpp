@@ -1,0 +1,1 @@
+[[noreturn]] void throwFatalVirtualEnvException(const char* message);

@@ -27,6 +27,9 @@ std::vector<Token> HSharpParser::Tokenizer::tokenize() {
             } else if (buf == "print") {
                 tokens.push_back({.ttype = TokenType::TOK_PRINT});
                 buf.clear();
+            } else if (buf == "input") {
+                tokens.push_back({.ttype = TokenType::TOK_INPUT});
+                buf.clear();
             } else {
                 tokens.push_back({.ttype = TokenType::TOK_IDENT, .value = buf});
                 buf.clear();
@@ -56,6 +59,35 @@ std::vector<Token> HSharpParser::Tokenizer::tokenize() {
         } else if (peek().value() == '=') {
             tokens.push_back({.ttype = TokenType::TOK_EQUALITY_SIGN});
             consume();
+        } else if (peek().value() == '+') {
+            tokens.push_back({.ttype = TokenType::TOK_PLUS});
+            consume();
+        } else if (peek().value() == '-') {
+            tokens.push_back({.ttype = TokenType::TOK_MINUS});
+            consume();
+        } else if (peek().value() == '/') {
+            tokens.push_back({.ttype = TokenType::TOK_FSLASH});
+            consume();
+        } else if (peek().value() == '*') {
+            tokens.push_back({.ttype = TokenType::TOK_MUL_SIGN});
+            consume();
+        } else if (peek().value() == '/' && peek(1).has_value() && peek(1).value() == '/') {
+            consume();
+            consume();
+            while (peek().has_value() && peek().value() != '\n')
+                consume();
+        } else if (peek().value() == '/' && peek(1).has_value() && peek(1).value() == '*') {
+            consume();
+            consume();
+            while (peek().has_value()) {
+                if (peek().value() == '*' && peek(1).has_value() && peek(1).value() == '/')
+                    break;
+                consume();
+            }
+            if (peek().has_value())
+                consume();
+            if (peek().has_value())
+                consume();
         } else if (std::isspace(peek().value())) {
             consume();
         } else {
