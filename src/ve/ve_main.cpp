@@ -43,13 +43,12 @@ bool HSharpVE::VirtualEnvironment::is_variable_value(void* value) {
     return it != std::end(global_scope.variables);
 }
 
-void HSharpVE::VirtualEnvironment::dispose_value(void* value, VariableType valuetype) {
-    if (!is_variable_value(value)) {
-        switch (valuetype) {
-            case VariableType::INT: integers_pool.free(static_cast<int64_t*>(value));
-            case VariableType::STRING: strings_pool.free(value);
-            default: std::terminate();
-        }
+void HSharpVE::VirtualEnvironment::dispose_value(ExpressionVisitorRetPair& data) {
+    if (!data.dealloc_required) return;
+    switch (data.type) {
+        case VariableType::INT: integers_pool.free(static_cast<int64_t*>(data.value)); break;
+        case VariableType::STRING: strings_pool.free(data.value); break;
+        default: std::terminate();
     }
 }
 

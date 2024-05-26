@@ -13,7 +13,7 @@ void HSharpVE::VirtualEnvironment::StatementVisitor_StatementPrint(HSharpParser:
     }
     std::puts(static_cast<std::string*>(pair.value)->c_str());
 
-    dispose_value(pair.value, pair.type);
+    dispose_value(pair);
 }
 
 void HSharpVE::VirtualEnvironment::StatementVisitor_StatementExit(HSharpParser::NodeStmtExit* stmt) {
@@ -28,7 +28,7 @@ void HSharpVE::VirtualEnvironment::StatementVisitor_StatementExit(HSharpParser::
         exit(1);
     } else
         exitcode = *static_cast<int64_t*>(pair.value);
-    dispose_value(pair.value, pair.type);
+    dispose_value(pair);
     delete_variables();
     exit(exitcode);
 }
@@ -48,8 +48,8 @@ void HSharpVE::VirtualEnvironment::StatementVisitor_StatementVarAssign(HSharpPar
         throwFatalVirtualEnvException("AssignException: cannot assign value to immediate value");
     auto variable = &global_scope.variables[stmt->ident.value.value().c_str()];
     ExpressionVisitorRetPair info = std::visit(exprvisitor, stmt->expr->expr);
-    variable->vtype = variable->vtype == info.type ? variable->vtype : info.type;
-    delete variable->value;
+    variable->vtype = info.type;
+
     variable->value = info.value;
 }
 
@@ -83,5 +83,5 @@ ExpressionVisitorRetPair HSharpVE::VirtualEnvironment::ExpressionVisitor_ExprIde
 }
 
 ExpressionVisitorRetPair HSharpVE::VirtualEnvironment::ExpressionVisitor_BinExpr(HSharpParser::NodeBinExpr *expr) const {
-    
+    return {};
 }

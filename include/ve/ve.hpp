@@ -29,6 +29,7 @@ namespace HSharpVE {
     struct ExpressionVisitorRetPair {
         VariableType type;
         void* value;
+        bool dealloc_required;
     };
 
     class VirtualEnvironment{
@@ -63,11 +64,12 @@ namespace HSharpVE {
                 return std::visit(parent->termvisitor, term->term);
             }
             ExpressionVisitorRetPair operator()(const HSharpParser::NodeExpressionStrLit* expr) const {
-                auto str = new std::string;
+                auto str = static_cast<std::string*>(parent->strings_pool.malloc());
                 *str = {expr->str_lit.value.value()};
                 return ExpressionVisitorRetPair{
                     .type = VariableType::STRING,
-                    .value = str
+                    .value = str,
+                    .dealloc_required = true
                 };
             }
             ExpressionVisitorRetPair operator()(HSharpParser::NodeBinExpr* expr) const {
@@ -84,9 +86,9 @@ namespace HSharpVE {
                     std::cerr << "Expression is not valid integer!" << std::endl;
                     exit(1);
                 } else {
-                    auto num = new int64_t;
+                    auto num = parent->integers_pool.malloc();
                     *num = std::stol(term->int_lit.value.value());
-                    return {.type = VariableType::INT, .value = num};
+                    return {.type = VariableType::INT, .value = num, .dealloc_required = true};
                 }
             }
             ExpressionVisitorRetPair operator()(const HSharpParser::NodeTermIdent* term) const {
@@ -96,7 +98,8 @@ namespace HSharpVE {
                 }
                 return {
                     parent->global_scope.variables.at(term->ident.value.value()).vtype,
-                    parent->global_scope.variables.at(term->ident.value.value()).value
+                    parent->global_scope.variables.at(term->ident.value.value()).value,
+                    false
                 };
             }
         };
@@ -106,28 +109,34 @@ namespace HSharpVE {
         public:
             explicit BinExprVisitor(VirtualEnvironment* parent) : parent(parent){}
             ExpressionVisitorRetPair operator()(const HSharpParser::NodeBinExprAdd* expr) const {
-                auto value = parent->integers_pool.malloc();
-                *value = *static_cast<int64_t*>(std::visit(parent->exprvisitor, expr->lhs->expr).value);
-                *value += *static_cast<int64_t*>(std::visit(parent->exprvisitor, expr->rhs->expr).value);
-                return ExpressionVisitorRetPair{.type = VariableType::INT, .value = value};
+                auto result = parent->integers_pool.malloc();
+                ExpressionVisitorRetPair lhs, rhs;
+                if ((lhs = std::visit(parent->exprvisitor, expr->lhs->expr)).type != VariableType::INT)
+                    std::terminate();
+                if ((rhs = std::visit(parent->exprvisitor, expr->rhs->expr)).type != VariableType::INT)
+                    std::terminate();
+                *result = *static_cast<int64_t*>(lhs.value) + *static_cast<int64_t*>(rhs.value);
+                parent->dispose_value(lhs);
+                parent->dispose_value(rhs);
+                return ExpressionVisitorRetPair{.type = VariableType::INT, .value = result, .dealloc_required = true};
             }
             ExpressionVisitorRetPair operator()(const HSharpParser::NodeBinExprSub* expr) const {
                 auto value = parent->integers_pool.malloc();
                 *value = *static_cast<int64_t*>(std::visit(parent->exprvisitor, expr->lhs->expr).value);
                 *value -= *static_cast<int64_t*>(std::visit(parent->exprvisitor, expr->rhs->expr).value);
-                return ExpressionVisitorRetPair{.type = VariableType::INT, .value = value};
+                return ExpressionVisitorRetPair{.type = VariableType::INT, .value = value, .dealloc_required = true};
             }
             ExpressionVisitorRetPair operator()(const HSharpParser::NodeBinExprMul* expr) const {
                 auto value = parent->integers_pool.malloc();
                 *value = *static_cast<int64_t*>(std::visit(parent->exprvisitor, expr->lhs->expr).value);
                 *value *= *static_cast<int64_t*>(std::visit(parent->exprvisitor, expr->rhs->expr).value);
-                return ExpressionVisitorRetPair{.type = VariableType::INT, .value = value};
+                return ExpressionVisitorRetPair{.type = VariableType::INT, .value = value, .dealloc_required = true};
             }
             ExpressionVisitorRetPair operator()(const HSharpParser::NodeBinExprDiv* expr) const {
                 auto value = parent->integers_pool.malloc();
                 *value = *static_cast<int64_t*>(std::visit(parent->exprvisitor, expr->lhs->expr).value);
                 *value /= *static_cast<int64_t*>(std::visit(parent->exprvisitor, expr->rhs->expr).value);
-                return ExpressionVisitorRetPair{.type = VariableType::INT, .value = value};
+                return ExpressionVisitorRetPair{.type = VariableType::INT, .value = value, .dealloc_required = true};
             }
         };
         HSharpParser::NodeProgram root;
@@ -155,16 +164,19 @@ namespace HSharpVE {
         void delete_variables();
         bool is_variable_value(void* value);
         bool is_variable(char* name);
-        void dispose_value(void* value, VariableType valuetype);
+        void dispose_value(ExpressionVisitorRetPair& data);
 
         static bool is_number(const std::string& s);
     public:
         explicit VirtualEnvironment(HSharpParser::NodeProgram root, const bool verbose)
             : root(std::move(root)),
-            verbose(verbose),
-            strings_pool(sizeof(std::string)){}
+              integers_pool(16),
+              strings_pool(sizeof(std::string)),
+              verbose(verbose){
+        }
         ~VirtualEnvironment() {
             delete_variables();
+
         }
         void run();
     };
