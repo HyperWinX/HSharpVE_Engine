@@ -26,12 +26,9 @@ namespace HSharpVE {
     struct Scope {
         std::unordered_map<std::string, Variable> variables;
     };
-    struct ValueInfo {
+    struct ExpressionVisitorRetPair {
         VariableType type;
-        union {
-            int64_t ivalue;
-            std::string svalue;
-        };
+        void* value;
     };
 
     class VirtualEnvironment{
@@ -62,17 +59,19 @@ namespace HSharpVE {
             VirtualEnvironment* parent;
         public:
             explicit ExpressionVisitor(VirtualEnvironment* parent) : parent(parent) {}
-            ValueInfo operator()(HSharpParser::NodeTerm* term) const {
-                return static_cast<ValueInfo>(std::visit(parent->termvisitor, term->term));
+            ExpressionVisitorRetPair operator()(HSharpParser::NodeTerm* term) const {
+                return std::visit(parent->termvisitor, term->term);
             }
-            ValueInfo operator()(const HSharpParser::NodeExpressionStrLit* expr) const {
-                return static_cast<ValueInfo>(ValueInfo{
+            ExpressionVisitorRetPair operator()(const HSharpParser::NodeExpressionStrLit* expr) const {
+                auto str = new std::string;
+                *str = {expr->str_lit.value.value()};
+                return ExpressionVisitorRetPair{
                     .type = VariableType::STRING,
-                    .svalue = std::string{expr->str_lit.value.value()
-                    }});
+                    .value = str
+                };
             }
-            ValueInfo operator()(HSharpParser::NodeBinExpr* expr) const {
-                return static_cast<ValueInfo>(std::visit(parent->binexprvisitor, expr->var));
+            ExpressionVisitorRetPair operator()(HSharpParser::NodeBinExpr* expr) const {
+                return std::visit(parent->binexprvisitor, expr->var);
             }
         };
         struct TermVisitor {
@@ -80,16 +79,17 @@ namespace HSharpVE {
             VirtualEnvironment* parent;
         public:
             explicit TermVisitor(VirtualEnvironment* parent) : parent(parent) {}
-            ValueInfo operator()(const HSharpParser::NodeTermIntLit* term) const {
+            ExpressionVisitorRetPair operator()(const HSharpParser::NodeTermIntLit* term) const {
                 if (!is_number(term->int_lit.value.value())) {
                     std::cerr << "Expression is not valid integer!" << std::endl;
                     exit(1);
                 } else {
-                    int64_t num = std::stol(term->int_lit.value.value());
-                    return {.type = VariableType::INT, .ivalue = num};
+                    auto num = new int64_t;
+                    *num = std::stol(term->int_lit.value.value());
+                    return {.type = VariableType::INT, .value = num};
                 }
             }
-            ValueInfo operator()(const HSharpParser::NodeTermIdent* term) const {
+            ExpressionVisitorRetPair operator()(const HSharpParser::NodeTermIdent* term) const {
                 if (!parent->is_variable(const_cast<char*>(term->ident.value.value().c_str()))){
                     std::cerr << "Invalid identifier" << std::endl;
                     exit(1);
@@ -105,29 +105,29 @@ namespace HSharpVE {
             VirtualEnvironment* parent;
         public:
             explicit BinExprVisitor(VirtualEnvironment* parent) : parent(parent){}
-            ValueInfo operator()(const HSharpParser::NodeBinExprAdd* expr) const {
+            ExpressionVisitorRetPair operator()(const HSharpParser::NodeBinExprAdd* expr) const {
                 auto value = parent->integers_pool.malloc();
                 *value = *static_cast<int64_t*>(std::visit(parent->exprvisitor, expr->lhs->expr).value);
                 *value += *static_cast<int64_t*>(std::visit(parent->exprvisitor, expr->rhs->expr).value);
-                return static_cast<ValueInfo>(ValueInfo{.type = VariableType::INT, .value = value});
+                return ExpressionVisitorRetPair{.type = VariableType::INT, .value = value};
             }
-            ValueInfo operator()(const HSharpParser::NodeBinExprSub* expr) const {
+            ExpressionVisitorRetPair operator()(const HSharpParser::NodeBinExprSub* expr) const {
                 auto value = parent->integers_pool.malloc();
                 *value = *static_cast<int64_t*>(std::visit(parent->exprvisitor, expr->lhs->expr).value);
                 *value -= *static_cast<int64_t*>(std::visit(parent->exprvisitor, expr->rhs->expr).value);
-                return ValueInfo{.type = VariableType::INT, .value = value};
+                return ExpressionVisitorRetPair{.type = VariableType::INT, .value = value};
             }
-            ValueInfo operator()(const HSharpParser::NodeBinExprMul* expr) const {
+            ExpressionVisitorRetPair operator()(const HSharpParser::NodeBinExprMul* expr) const {
                 auto value = parent->integers_pool.malloc();
                 *value = *static_cast<int64_t*>(std::visit(parent->exprvisitor, expr->lhs->expr).value);
                 *value *= *static_cast<int64_t*>(std::visit(parent->exprvisitor, expr->rhs->expr).value);
-                return ValueInfo{.type = VariableType::INT, .value = value};
+                return ExpressionVisitorRetPair{.type = VariableType::INT, .value = value};
             }
-            ValueInfo operator()(const HSharpParser::NodeBinExprDiv* expr) const {
+            ExpressionVisitorRetPair operator()(const HSharpParser::NodeBinExprDiv* expr) const {
                 auto value = parent->integers_pool.malloc();
                 *value = *static_cast<int64_t*>(std::visit(parent->exprvisitor, expr->lhs->expr).value);
                 *value /= *static_cast<int64_t*>(std::visit(parent->exprvisitor, expr->rhs->expr).value);
-                return ValueInfo{.type = VariableType::INT, .value = value};
+                return ExpressionVisitorRetPair{.type = VariableType::INT, .value = value};
             }
         };
         HSharpParser::NodeProgram root;
