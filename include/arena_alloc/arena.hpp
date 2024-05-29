@@ -26,7 +26,7 @@ namespace HSharpParser {
 
         template<typename T>
         inline T* alloc() {
-            T* ptr = static_cast<T*>(current_offset);
+            T* ptr = new(current_offset)T();
             current_offset += sizeof(T);
             return ptr;
         }
