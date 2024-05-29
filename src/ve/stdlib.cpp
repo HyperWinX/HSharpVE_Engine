@@ -61,7 +61,6 @@ void HSharpVE::VirtualEnvironment::StatementVisitor_StatementVarAssign(HSharpPar
     auto variable = &global_scope.variables[stmt->ident.value.value().c_str()];
     ValueInfo info = std::visit(exprvisitor, stmt->expr->expr);
     variable->vtype = info.type;
-
     variable->value = info.value;
 }
 

@@ -28,7 +28,7 @@ HSharpVE::ValueInfo HSharpVE::VirtualEnvironment::ExpressionVisitor::operator()(
 }
 HSharpVE::ValueInfo HSharpVE::VirtualEnvironment::ExpressionVisitor::operator()(const HSharpParser::NodeExpressionStrLit *expr) const {
     auto str = static_cast<std::string*>(parent->strings_pool.malloc());
-    *str = {expr->str_lit.value.value()};
+    str = new(str)std::string(expr->str_lit.value.value());
     return ValueInfo{
             .type = VariableType::STRING,
             .value = str,
