@@ -153,6 +153,7 @@ namespace HSharpParser {
         Token try_consume(TokenType type, const char* err_msg);
         std::optional<Token> try_consume(TokenType type);
         Token consume();
+        void skip(int count = 1);
 
         std::optional<NodeStmt*> parse_statement();
         std::optional<NodeExpression*> parse_expression();

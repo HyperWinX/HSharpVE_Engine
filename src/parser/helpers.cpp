@@ -24,6 +24,10 @@ HSharpParser::Token HSharpParser::Parser::consume() {
     return tokens.at(index++);
 }
 
+void HSharpParser::Parser::skip(int count) {
+    index += count;
+}
+
 HSharpParser::Token HSharpParser::Parser::try_consume(TokenType type, const char* err_msg) {
     if (peek().has_value() && peek().value().ttype == type)
         return consume();

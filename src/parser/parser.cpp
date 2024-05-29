@@ -1,10 +1,8 @@
 #include <optional>
 #include <iostream>
-#include <ranges>
 #include <valarray>
 
 #include <parser/parser.hpp>
-#include <arena_alloc/arena.hpp>
 
 std::optional<HSharpParser::NodeBinExpr *> HSharpParser::Parser::parse_bin_expr() {
     if (auto lhs = parse_expression()) {
@@ -14,7 +12,7 @@ std::optional<HSharpParser::NodeBinExpr *> HSharpParser::Parser::parse_bin_expr(
         } else if (peek().has_value() && peek().value().ttype == TokenType::TOK_MINUS) {
             auto bin_expr_sub = allocator.alloc<NodeBinExprSub>();
             bin_expr_sub->lhs = lhs.value();
-            consume();
+            skip();
             if (auto rhs = parse_expression()) {
                 bin_expr_sub->rhs = rhs.value();
                 bin_expr->var = bin_expr_sub;
@@ -26,7 +24,7 @@ std::optional<HSharpParser::NodeBinExpr *> HSharpParser::Parser::parse_bin_expr(
         } else if (peek().has_value() && peek().value().ttype == TokenType::TOK_MUL_SIGN) {
             auto bin_expr_mul = allocator.alloc<NodeBinExprMul>();
             bin_expr_mul->lhs = lhs.value();
-            consume();
+            skip();
             if (auto rhs = parse_expression()) {
                 bin_expr_mul->rhs = rhs.value();
                 bin_expr->var = bin_expr_mul;
@@ -83,9 +81,9 @@ std::optional<HSharpParser::NodeExpression *> HSharpParser::Parser::parse_expres
             lhs_expr->expr = term.value();
             bin_expr_add->lhs = lhs_expr;
             if (auto rhs = parse_expression()) {
+                auto expr = allocator.alloc<NodeExpression>();
                 bin_expr_add->rhs = rhs.value();
                 bin_expr->var = bin_expr_add;
-                auto expr = allocator.alloc<NodeExpression>();
                 expr->expr = bin_expr;
                 return expr;
             } else {
@@ -114,8 +112,7 @@ std::optional<HSharpParser::NodeExpression *> HSharpParser::Parser::parse_expres
 std::optional<HSharpParser::NodeStmt *> HSharpParser::Parser::parse_statement() {
     if (peek().has_value() && peek().value().ttype == TokenType::TOK_EXIT &&
         peek(1).has_value() && peek(1).value().ttype == TokenType::TOK_PAREN_OPEN) {
-        consume();
-        consume();
+        skip(2);
         auto stmt_exit = allocator.alloc<NodeStmtExit>();
         if (auto node_expr = parse_expression()) {
             stmt_exit->expr = node_expr.value();
@@ -132,8 +129,7 @@ std::optional<HSharpParser::NodeStmt *> HSharpParser::Parser::parse_statement() 
         return node_stmt;
     } else if (peek().has_value() && peek().value().ttype == TokenType::TOK_PRINT &&
                peek(1).has_value() && peek(1).value().ttype == TokenType::TOK_PAREN_OPEN) {
-        consume();
-        consume();
+        skip(2);
         auto stmt_print = allocator.alloc<NodeStmtPrint>();
         if (auto expr = parse_expression())
             stmt_print->expr = expr.value();
@@ -146,8 +142,7 @@ std::optional<HSharpParser::NodeStmt *> HSharpParser::Parser::parse_statement() 
         return node_stmt;
     } else if (peek().has_value() && peek().value().ttype == TokenType::TOK_INPUT &&
                peek(1).has_value() && peek(1).value().ttype == TokenType::TOK_PAREN_OPEN) {
-        consume();
-        consume();
+        skip(2);
         auto node_input = allocator.alloc<NodeStmtInput>();
         if (auto expr = parse_expression())
             node_input->expr = expr.value();
@@ -161,10 +156,10 @@ std::optional<HSharpParser::NodeStmt *> HSharpParser::Parser::parse_statement() 
     } else if (peek().has_value() && peek().value().ttype == TokenType::TOK_VAR &&
                peek(1).has_value() && peek(1).value().ttype == TokenType::TOK_IDENT &&
                peek(2).has_value() && peek(2).value().ttype == TokenType::TOK_EQUALITY_SIGN) {
-        consume();
+        skip();
         auto node_stmt_var = allocator.alloc<NodeStmtVar>();
         node_stmt_var->ident = consume();
-        consume();
+        skip();
         if (auto expr = parse_expression()) {
             node_stmt_var->expr = expr.value();
         } else {
@@ -181,7 +176,7 @@ std::optional<HSharpParser::NodeStmt *> HSharpParser::Parser::parse_statement() 
                 peek(1).has_value() && peek(1).value().ttype == TokenType::TOK_EQUALITY_SIGN) {
         auto node_stmt = allocator.alloc<NodeStmtVarAssign>();
         node_stmt->ident = consume();
-        consume();
+        skip();
         if (auto expr = parse_expression())
             node_stmt->expr = expr.value();
         else {

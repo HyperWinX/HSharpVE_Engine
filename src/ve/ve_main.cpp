@@ -71,22 +71,40 @@ HSharpVE::ValueInfo HSharpVE::VirtualEnvironment::BinExprVisitor::operator()(con
     return ValueInfo{.type = VariableType::INT, .value = result, .dealloc_required = true};
 }
 HSharpVE::ValueInfo HSharpVE::VirtualEnvironment::BinExprVisitor::operator()(const HSharpParser::NodeBinExprSub *expr) const {
-    auto value = parent->integers_pool.malloc();
-    *value = *static_cast<int64_t*>(std::visit(parent->exprvisitor, expr->lhs->expr).value);
-    *value -= *static_cast<int64_t*>(std::visit(parent->exprvisitor, expr->rhs->expr).value);
-    return ValueInfo{.type = VariableType::INT, .value = value, .dealloc_required = true};
+    auto result = parent->integers_pool.malloc();
+    ValueInfo lhs, rhs;
+    if ((lhs = std::visit(parent->exprvisitor, expr->lhs->expr)).type != VariableType::INT)
+        throwFatalVirtualEnvException("Binary expression evaluation impossible: invalid literal type");
+    if ((rhs = std::visit(parent->exprvisitor, expr->rhs->expr)).type != VariableType::INT)
+        throwFatalVirtualEnvException("Binary expression evaluation impossible: invalid literal type");
+    *result = *static_cast<int64_t*>(lhs.value) - *static_cast<int64_t*>(rhs.value);
+    parent->dispose_value(lhs);
+    parent->dispose_value(rhs);
+    return ValueInfo{.type = VariableType::INT, .value = result, .dealloc_required = true};
 }
 HSharpVE::ValueInfo HSharpVE::VirtualEnvironment::BinExprVisitor::operator()(const HSharpParser::NodeBinExprMul *expr) const {
-    auto value = parent->integers_pool.malloc();
-    *value = *static_cast<int64_t*>(std::visit(parent->exprvisitor, expr->lhs->expr).value);
-    *value *= *static_cast<int64_t*>(std::visit(parent->exprvisitor, expr->rhs->expr).value);
-    return ValueInfo{.type = VariableType::INT, .value = value, .dealloc_required = true};
+    auto result = parent->integers_pool.malloc();
+    ValueInfo lhs, rhs;
+    if ((lhs = std::visit(parent->exprvisitor, expr->lhs->expr)).type != VariableType::INT)
+        throwFatalVirtualEnvException("Binary expression evaluation impossible: invalid literal type");
+    if ((rhs = std::visit(parent->exprvisitor, expr->rhs->expr)).type != VariableType::INT)
+        throwFatalVirtualEnvException("Binary expression evaluation impossible: invalid literal type");
+    *result = *static_cast<int64_t*>(lhs.value) * *static_cast<int64_t*>(rhs.value);
+    parent->dispose_value(lhs);
+    parent->dispose_value(rhs);
+    return ValueInfo{.type = VariableType::INT, .value = result, .dealloc_required = true};
 }
 HSharpVE::ValueInfo HSharpVE::VirtualEnvironment::BinExprVisitor::operator()(const HSharpParser::NodeBinExprDiv *expr) const {
-    auto value = parent->integers_pool.malloc();
-    *value = *static_cast<int64_t*>(std::visit(parent->exprvisitor, expr->lhs->expr).value);
-    *value /= *static_cast<int64_t*>(std::visit(parent->exprvisitor, expr->rhs->expr).value);
-    return ValueInfo{.type = VariableType::INT, .value = value, .dealloc_required = true};
+    auto result = parent->integers_pool.malloc();
+    ValueInfo lhs, rhs;
+    if ((lhs = std::visit(parent->exprvisitor, expr->lhs->expr)).type != VariableType::INT)
+        throwFatalVirtualEnvException("Binary expression evaluation impossible: invalid literal type");
+    if ((rhs = std::visit(parent->exprvisitor, expr->rhs->expr)).type != VariableType::INT)
+        throwFatalVirtualEnvException("Binary expression evaluation impossible: invalid literal type");
+    *result = *static_cast<int64_t*>(lhs.value) / *static_cast<int64_t*>(rhs.value);
+    parent->dispose_value(lhs);
+    parent->dispose_value(rhs);
+    return ValueInfo{.type = VariableType::INT, .value = result, .dealloc_required = true};
 }
 
 void HSharpVE::VirtualEnvironment::exec_statement(const HSharpParser::NodeStmt* stmt) {
