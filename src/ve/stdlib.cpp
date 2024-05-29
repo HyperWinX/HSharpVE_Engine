@@ -3,10 +3,10 @@
 #include <parser/parser.hpp>
 #include <ve/ve.hpp>
 
-using HSharpVE::ExpressionVisitorRetPair;
+using HSharpVE::ValueInfo;
 
 void HSharpVE::VirtualEnvironment::StatementVisitor_StatementPrint(HSharpParser::NodeStmtPrint* stmt) {
-    ExpressionVisitorRetPair pair = std::visit(exprvisitor, stmt->expr->expr);
+    ValueInfo pair = std::visit(exprvisitor, stmt->expr->expr);
     std::string result;
     switch (pair.type){
         case VariableType::INT:
@@ -25,7 +25,7 @@ void HSharpVE::VirtualEnvironment::StatementVisitor_StatementPrint(HSharpParser:
 
 void HSharpVE::VirtualEnvironment::StatementVisitor_StatementExit(HSharpParser::NodeStmtExit* stmt) {
     int64_t exitcode;
-    ExpressionVisitorRetPair pair = std::visit(exprvisitor, stmt->expr->expr);
+    ValueInfo pair = std::visit(exprvisitor, stmt->expr->expr);
     switch(pair.type){
         case VariableType::INT:
             exitcode = *static_cast<int64_t*>(pair.value);
@@ -50,7 +50,7 @@ void HSharpVE::VirtualEnvironment::StatementVisitor_StatementVar(HSharpParser::N
         std::cerr << "Variable reinitialization is not allowed\n";
         exit(1);
     } else {
-        const ExpressionVisitorRetPair pair = std::visit(exprvisitor, stmt->expr->expr);
+        const ValueInfo pair = std::visit(exprvisitor, stmt->expr->expr);
         global_scope.variables[stmt->ident.value.value()] = {.vtype = pair.type, .value = pair.value};
     }
 }
@@ -59,20 +59,20 @@ void HSharpVE::VirtualEnvironment::StatementVisitor_StatementVarAssign(HSharpPar
     if (!is_variable(const_cast<char*>(stmt->ident.value.value().c_str())))
         throwFatalVirtualEnvException("AssignException: cannot assign value to immediate value");
     auto variable = &global_scope.variables[stmt->ident.value.value().c_str()];
-    ExpressionVisitorRetPair info = std::visit(exprvisitor, stmt->expr->expr);
+    ValueInfo info = std::visit(exprvisitor, stmt->expr->expr);
     variable->vtype = info.type;
 
     variable->value = info.value;
 }
 
 
-ExpressionVisitorRetPair HSharpVE::VirtualEnvironment::ExpressionVisitor_ExprStrLit(NodeExpressionStrLit* expr) {
+ValueInfo HSharpVE::VirtualEnvironment::ExpressionVisitor_ExprStrLit(NodeExpressionStrLit* expr) {
     auto str = static_cast<std::string*>(strings_pool.malloc());
     *str = std::string(expr->str_lit.value.value());
     return {VariableType::STRING, str};
 }
 
-ExpressionVisitorRetPair HSharpVE::VirtualEnvironment::ExpressionVisitor_ExprIntLit(HSharpParser::NodeTermIntLit* expr) {
+ValueInfo HSharpVE::VirtualEnvironment::ExpressionVisitor_ExprIntLit(HSharpParser::NodeTermIntLit* expr) {
     if (!is_number(expr->int_lit.value.value())) {
         std::cerr << "Expression is not valid integer!" << std::endl;
         exit(1);
@@ -83,7 +83,7 @@ ExpressionVisitorRetPair HSharpVE::VirtualEnvironment::ExpressionVisitor_ExprInt
     }
 }
 
-ExpressionVisitorRetPair HSharpVE::VirtualEnvironment::ExpressionVisitor_ExprIdent(HSharpParser::NodeTermIdent* expr) const {
+ValueInfo HSharpVE::VirtualEnvironment::ExpressionVisitor_ExprIdent(HSharpParser::NodeTermIdent* expr) const {
     if (!global_scope.variables.contains(expr->ident.value.value()))
         std::terminate();
     else {
@@ -94,6 +94,6 @@ ExpressionVisitorRetPair HSharpVE::VirtualEnvironment::ExpressionVisitor_ExprIde
     }
 }
 
-ExpressionVisitorRetPair HSharpVE::VirtualEnvironment::ExpressionVisitor_BinExpr(HSharpParser::NodeBinExpr *expr) const {
+ValueInfo HSharpVE::VirtualEnvironment::ExpressionVisitor_BinExpr(HSharpParser::NodeBinExpr *expr) const {
     return {};
 }
