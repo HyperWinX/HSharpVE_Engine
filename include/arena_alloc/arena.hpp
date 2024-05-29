@@ -6,13 +6,14 @@ namespace HSharpParser {
     class ArenaAllocator {
     private:
         size_t allocated_size;
-        void* current_offset;
+        char* current_offset;
         void* mem_block_start;
     public:
         inline explicit ArenaAllocator(ArenaAllocator& alloc) = delete;
         inline ArenaAllocator operator=(ArenaAllocator& alloc) = delete;
         inline explicit ArenaAllocator(size_t bytes) : allocated_size(bytes) {
-            mem_block_start = current_offset = malloc(bytes);
+            mem_block_start = malloc(bytes);
+            current_offset = static_cast<char*>(mem_block_start);
             if (!mem_block_start) {
                 std::cerr << "ArenaAllocator failed to allocate memory: malloc() returned null" << std::endl;
                 exit(1);

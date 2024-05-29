@@ -85,11 +85,10 @@ namespace HSharpVE {
                 if (!is_number(term->int_lit.value.value())) {
                     std::cerr << "Expression is not valid integer!" << std::endl;
                     exit(1);
-                } else {
-                    auto num = parent->integers_pool.malloc();
-                    *num = std::stol(term->int_lit.value.value());
-                    return {.type = VariableType::INT, .value = num, .dealloc_required = true};
                 }
+                auto num = parent->integers_pool.malloc();
+                *num = std::stol(term->int_lit.value.value());
+                return {.type = VariableType::INT, .value = num, .dealloc_required = true};
             }
             ExpressionVisitorRetPair operator()(const HSharpParser::NodeTermIdent* term) const {
                 if (!parent->is_variable(const_cast<char*>(term->ident.value.value().c_str()))){
@@ -112,9 +111,9 @@ namespace HSharpVE {
                 auto result = parent->integers_pool.malloc();
                 ExpressionVisitorRetPair lhs, rhs;
                 if ((lhs = std::visit(parent->exprvisitor, expr->lhs->expr)).type != VariableType::INT)
-                    std::terminate();
+                    throwFatalVirtualEnvException("Binary expression evaluation impossible: invalid literal type");
                 if ((rhs = std::visit(parent->exprvisitor, expr->rhs->expr)).type != VariableType::INT)
-                    std::terminate();
+                    throwFatalVirtualEnvException("Binary expression evaluation impossible: invalid literal type");
                 *result = *static_cast<int64_t*>(lhs.value) + *static_cast<int64_t*>(rhs.value);
                 parent->dispose_value(lhs);
                 parent->dispose_value(rhs);

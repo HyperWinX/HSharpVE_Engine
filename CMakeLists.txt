@@ -15,7 +15,8 @@ set(ALL_SRCS
         src/ve/stdlib.cpp)
 #Debug target
 add_executable(hve_ng-debug ${ALL_SRCS})
-set_target_properties(hve_ng-debug PROPERTIES COMPILE_FLAGS "-Wall -O0 -ggdb3 -fsanitize=leak")
+set_target_properties(hve_ng-debug PROPERTIES COMPILE_FLAGS "-Wall -O0 -ggdb3 -fsanitize=address -fsanitize=leak -fsanitize=undefined")
+target_link_options(hve_ng-debug PUBLIC -lasan -fsanitize=address -fsanitize=leak -fsanitize=undefined)
 #Release target
 add_executable(hve_ng-release ${ALL_SRCS})
 set_target_properties(hve_ng-release PROPERTIES COMPILE_FLAGS "-Wall -O2 -fdata-sections -ffunction-sections -Wl,--gc-sections")

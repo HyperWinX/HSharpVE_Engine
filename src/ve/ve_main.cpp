@@ -22,7 +22,8 @@ void HSharpVE::VirtualEnvironment::delete_variables() {
         switch (pair.second.vtype) {
             case VariableType::INT: integers_pool.free(static_cast<int64_t*>(pair.second.value)); break;
             case VariableType::STRING: strings_pool.free(pair.second.value); break;
-            default: std::terminate();
+            default:
+                std::printf("Cannot dispose variable %s: unknown type, freeing impossible", pair.first.c_str());
         }
     }
     global_scope.variables.clear();
