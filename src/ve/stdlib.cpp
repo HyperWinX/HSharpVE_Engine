@@ -7,11 +7,18 @@ using HSharpVE::ExpressionVisitorRetPair;
 
 void HSharpVE::VirtualEnvironment::StatementVisitor_StatementPrint(HSharpParser::NodeStmtPrint* stmt) {
     ExpressionVisitorRetPair pair = std::visit(exprvisitor, stmt->expr->expr);
-    if (pair.type != VariableType::STRING) {
-        std::cerr << "Print: expected string, but got integer\n";
-        exit(1);
+    std::string result;
+    switch (pair.type){
+        case VariableType::INT:
+            result = std::to_string(*static_cast<int64_t*>(pair.value));
+            break;
+        case VariableType::STRING:
+            result = *static_cast<std::string*>(pair.value);
+            break;
+        default:
+            throwFatalVirtualEnvException("print(): conversion failed: unknown type");
     }
-    std::puts(static_cast<std::string*>(pair.value)->c_str());
+    std::puts(result.c_str());
 
     dispose_value(pair);
 }
@@ -19,15 +26,20 @@ void HSharpVE::VirtualEnvironment::StatementVisitor_StatementPrint(HSharpParser:
 void HSharpVE::VirtualEnvironment::StatementVisitor_StatementExit(HSharpParser::NodeStmtExit* stmt) {
     int64_t exitcode;
     ExpressionVisitorRetPair pair = std::visit(exprvisitor, stmt->expr->expr);
-    if (pair.type == VariableType::STRING) {
-        if (!is_number(*static_cast<std::string*>(pair.value)))
-            throwFatalVirtualEnvException("ConvertException: cannot convert string into integer");
-        exitcode = std::stol(*static_cast<std::string*>(pair.value));
-    } else if (pair.type != VariableType::INT) {
-        std::cerr << "Exit: expected integer, but got string\n";
-        exit(1);
-    } else
-        exitcode = *static_cast<int64_t*>(pair.value);
+    switch(pair.type){
+        case VariableType::INT:
+            exitcode = *static_cast<int64_t*>(pair.value);
+            break;
+        case VariableType::STRING:{
+            std::string* ptr = static_cast<std::string*>(pair.value);
+            if (!is_number(*ptr))
+                throwFatalVirtualEnvException("exit(): conversion failed: string is not convertable to number");
+            exitcode = std::stol(*ptr);
+            break;
+        }
+        default:
+            throwFatalVirtualEnvException("exit(): conversion failed: unknown type");
+    }
     dispose_value(pair);
     delete_variables();
     exit(exitcode);
