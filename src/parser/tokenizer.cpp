@@ -1,9 +1,10 @@
 #include <vector>
 #include <string>
-#include <iostream>
 
 #include <parser/parser.hpp>
 #include <main/file.hpp>
+#include <ve/exceptions.hpp>
+#include <ve/ve.hpp>
 
 using std::uint32_t;
 using HSharpParser::Token;
@@ -91,8 +92,7 @@ std::vector<Token> HSharpParser::Tokenizer::tokenize() {
         } else if (std::isspace(peek().value())) {
             consume();
         } else {
-            std::cerr << "Syntax error!\n";
-            exit(1);
+            throwFatalException(HSharpVE::ExceptionSource::Tokenizer, HSharpVE::ExceptionType::SyntaxError, "Detected invalid syntax.");
         }
     }
 

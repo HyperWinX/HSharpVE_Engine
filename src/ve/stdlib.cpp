@@ -17,7 +17,9 @@ void HSharpVE::VirtualEnvironment::StatementVisitor_StatementPrint(HSharpParser:
             result = *static_cast<std::string*>(pair.value);
             break;
         default:
-            throwFatalVirtualEnvException("print(): conversion failed: unknown type");
+            throwFatalException(ExceptionSource::VirtualEnv,
+                                ExceptionType::TypeError,
+                                "print(): conversion failed: unknown type");
     }
     std::puts(result.c_str());
 
@@ -34,12 +36,16 @@ void HSharpVE::VirtualEnvironment::StatementVisitor_StatementExit(HSharpParser::
         case VariableType::STRING:{
             std::string* ptr = static_cast<std::string*>(pair.value);
             if (!is_number(*ptr))
-                throwFatalVirtualEnvException("exit(): conversion failed: string is not convertable to number");
+                throwFatalException(ExceptionSource::VirtualEnv,
+                                    ExceptionType::ConversionError,
+                                    "exit(): conversion failed: string is not convertable to number");
             exitcode = std::stol(*ptr);
             break;
         }
         default:
-            throwFatalVirtualEnvException("exit(): conversion failed: unknown type");
+            throwFatalException(ExceptionSource::VirtualEnv,
+                                ExceptionType::TypeError,
+                                "exit(): conversion failed: unknown type");
     }
     dispose_value(pair);
     delete_variables();
@@ -58,7 +64,9 @@ void HSharpVE::VirtualEnvironment::StatementVisitor_StatementVar(HSharpParser::N
 
 void HSharpVE::VirtualEnvironment::StatementVisitor_StatementVarAssign(HSharpParser::NodeStmtVarAssign *stmt) {
     if (!is_variable(const_cast<char*>(stmt->ident.value.value().c_str())))
-        throwFatalVirtualEnvException("AssignException: cannot assign value to immediate value");
+        throwFatalException(ExceptionSource::VirtualEnv,
+                            ExceptionType::InvalidAssign,
+                            "Cannot assign value to immediate value");
     auto variable = &global_scope.variables[stmt->ident.value.value().c_str()];
     ValueInfo info = std::visit(exprvisitor, stmt->expr->expr);
     delete_var_value(*variable);
@@ -72,7 +80,9 @@ void HSharpVE::VirtualEnvironment::StatementVisitor_StatementVarAssign(HSharpPar
             variable->value = new(variable->value)std::string(*static_cast<std::string*>(info.value));
             break;
         default:
-            throwFatalVirtualEnvException("Cannot assign value: invalid type");
+            throwFatalException(ExceptionSource::VirtualEnv,
+                                ExceptionType::InvalidAssign,
+                                "Cannot assign value: invalid type");
     }
     dispose_value(info);
 }

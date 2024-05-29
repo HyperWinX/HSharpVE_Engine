@@ -18,6 +18,20 @@ using HSharpParser::NodeStmtVarAssign;
 using HSharpParser::NodeExpressionStrLit;
 
 namespace HSharpVE {
+    /* Exception handling */
+    enum class ExceptionSource{
+        Tokenizer,
+        Parser,
+        VirtualEnv
+    };
+    enum class ExceptionType{
+        SyntaxError,
+        TypeError,
+        InvalidAssign,
+        NotImplemented,
+        ConversionError
+    };
+
     enum class VariableType {
         INT,
         STRING
@@ -112,7 +126,6 @@ namespace HSharpVE {
         }
         ~VirtualEnvironment() {
             delete_variables();
-
         }
         void run();
     };
