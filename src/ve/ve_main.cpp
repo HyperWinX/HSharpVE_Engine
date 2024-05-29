@@ -6,6 +6,7 @@
 #include <ve/ve.hpp>
 
 using std::uint32_t;
+using std::string;
 
 /* All internal function bodies */
 void HSharpVE::VirtualEnvironment::StatementVisitor::operator()(HSharpParser::NodeStmtInput *stmt) const {
@@ -107,6 +108,29 @@ HSharpVE::ValueInfo HSharpVE::VirtualEnvironment::BinExprVisitor::operator()(con
     return ValueInfo{.type = VariableType::INT, .value = result, .dealloc_required = true};
 }
 
+void HSharpVE::VirtualEnvironment::delete_var_value(HSharpVE::Variable &variable) {
+    switch(variable.vtype){
+        case VariableType::INT:
+            integers_pool.free(static_cast<int64_t*>(variable.value));
+            break;
+        case VariableType::STRING:
+            static_cast<string*>(variable.value)->~string();
+            strings_pool.free(static_cast<string*>(variable.value));
+            break;
+        default:
+            throwFatalVirtualEnvException("Cannot delete value: invalid type");
+    }
+}
+void* HSharpVE::VirtualEnvironment::allocate(HSharpVE::VariableType vtype) {
+    switch(vtype){
+        case VariableType::INT:
+            return integers_pool.malloc();
+        case VariableType::STRING:
+            return strings_pool.malloc();
+        default:
+            throwFatalVirtualEnvException("Cannot allocate: invalid type");
+    }
+}
 void HSharpVE::VirtualEnvironment::exec_statement(const HSharpParser::NodeStmt* stmt) {
     std::visit(stmtvisitor, stmt->statement);
 }

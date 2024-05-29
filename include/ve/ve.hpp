@@ -99,6 +99,8 @@ namespace HSharpVE {
         void delete_variables();
         bool is_variable(char* name);
         void dispose_value(ValueInfo& data);
+        void delete_var_value(Variable& variable);
+        void* allocate(VariableType vtype);
 
         static bool is_number(const std::string& s);
     public:

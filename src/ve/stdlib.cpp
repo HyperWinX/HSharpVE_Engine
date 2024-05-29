@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cstring>
 
 #include <parser/parser.hpp>
 #include <ve/ve.hpp>
@@ -60,8 +61,20 @@ void HSharpVE::VirtualEnvironment::StatementVisitor_StatementVarAssign(HSharpPar
         throwFatalVirtualEnvException("AssignException: cannot assign value to immediate value");
     auto variable = &global_scope.variables[stmt->ident.value.value().c_str()];
     ValueInfo info = std::visit(exprvisitor, stmt->expr->expr);
+    delete_var_value(*variable);
     variable->vtype = info.type;
-    variable->value = info.value;
+    variable->value = allocate(info.type);
+    switch(info.type){
+        case VariableType::INT:
+            memcpy(variable->value, info.value, sizeof(int64_t));
+            break;
+        case VariableType::STRING:
+            variable->value = new(variable->value)std::string(*static_cast<std::string*>(info.value));
+            break;
+        default:
+            throwFatalVirtualEnvException("Cannot assign value: invalid type");
+    }
+    dispose_value(info);
 }
 
 
