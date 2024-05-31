@@ -24,22 +24,25 @@
     }
 
 
-namespace HSharpVE{
-DEFINE_ENUM_WITH_STRING_CONVERSIONS(ExceptionSource,
-(Tokenizer)\
-(Parser)\
-(VirtualEnv));
-
-DEFINE_ENUM_WITH_STRING_CONVERSIONS(ExceptionType,
-(SyntaxError)\
-(TypeError)\
-(InvalidAssign)\
-(NotImplemented)\
-(ConversionError)\
-(ExpressionParseError)\
-(UnexpectedToken)\
-(EndOfFile));
+namespace HSharpParser{
+    DEFINE_ENUM_WITH_STRING_CONVERSIONS(TokenType,
+(TOK_EXIT)\
+(TOK_VAR)\
+(TOK_PRINT)\
+(TOK_INPUT)\
+(TOK_INT_LIT)\
+(TOK_STR_LIT)\
+(TOK_SEMICOLON)\
+(TOK_PLUS)\
+(TOK_MINUS)\
+(TOK_FSLASH)\
+(TOK_MUL_SIGN)\
+(TOK_EQUALITY_SIGN)\
+(TOK_PAREN_OPEN)\
+(TOK_PAREN_CLOSE)\
+(TOK_CURLY_OPEN)\
+(TOK_CURLY_CLOSE)\
+(TOK_DOT)\
+(TOK_IDENT)\
+(TOK_IF));
 }
-
-[[noreturn]] void throwFatalException(HSharpVE::ExceptionSource source, HSharpVE::ExceptionType type, std::string& message);
-[[noreturn]] void throwFatalException(HSharpVE::ExceptionSource source, HSharpVE::ExceptionType type, const char* message);

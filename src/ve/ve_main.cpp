@@ -35,6 +35,7 @@ HSharpVE::ValueInfo HSharpVE::VirtualEnvironment::ExpressionVisitor::operator()(
     return ValueInfo{
             .type = VariableType::STRING,
             .value = str,
+            .line = expr->line,
             .dealloc_required = true
     };
 }
@@ -47,9 +48,10 @@ HSharpVE::ValueInfo HSharpVE::VirtualEnvironment::TermVisitor::operator()(const 
         exit(1);
     }
     return {
-            parent->global_scope.variables.at(term->ident.value.value()).vtype,
-            parent->global_scope.variables.at(term->ident.value.value()).value,
-            false
+            .type = parent->global_scope.variables.at(term->ident.value.value()).vtype,
+            .value = parent->global_scope.variables.at(term->ident.value.value()).value,
+            .line = term->line,
+            .dealloc_required = false
     };
 }
 HSharpVE::ValueInfo HSharpVE::VirtualEnvironment::TermVisitor::operator()(const HSharpParser::NodeTermIntLit *term) const {
@@ -59,7 +61,10 @@ HSharpVE::ValueInfo HSharpVE::VirtualEnvironment::TermVisitor::operator()(const 
     }
     auto num = parent->integers_pool.malloc();
     *num = std::stol(term->int_lit.value.value());
-    return {.type = VariableType::INT, .value = num, .dealloc_required = true};
+    return {.type = VariableType::INT,
+            .value = num,
+            .line = term->line,
+            .dealloc_required = true};
 }
 HSharpVE::ValueInfo HSharpVE::VirtualEnvironment::BinExprVisitor::operator()(const HSharpParser::NodeBinExprAdd *expr) const {
     auto result = parent->integers_pool.malloc();
@@ -192,4 +197,10 @@ bool HSharpVE::VirtualEnvironment::is_number(const std::string& s) {
     std::string::const_iterator it = s.begin();
     while (it != s.end() && std::isdigit(*it)) ++it;
     return !s.empty() && it == s.end();
+}
+
+template<typename... Args>
+std::string HSharpVE::VirtualEnvironment::vformat_wrapper(const char* format, Args&&... args)
+{
+    return std::vformat(format, std::make_format_args(args...));
 }

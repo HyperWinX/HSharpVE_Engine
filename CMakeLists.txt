@@ -12,7 +12,8 @@ set(ALL_SRCS
         src/parser/tokenizer.cpp
         src/ve/ve_main.cpp
         src/ve/exceptions.cpp
-        src/ve/stdlib.cpp)
+        src/ve/stdlib.cpp
+        src/main/string_split.cpp)
 #Debug target
 add_executable(hve_ng-debug ${ALL_SRCS})
 set_target_properties(hve_ng-debug PROPERTIES COMPILE_FLAGS "-Wall -O0 -ggdb3 -fsanitize=address -fsanitize=leak -fsanitize=undefined")

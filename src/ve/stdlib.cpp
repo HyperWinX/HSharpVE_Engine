@@ -35,10 +35,14 @@ void HSharpVE::VirtualEnvironment::StatementVisitor_StatementExit(HSharpParser::
             break;
         case VariableType::STRING:{
             std::string* ptr = static_cast<std::string*>(pair.value);
-            if (!is_number(*ptr))
+            if (!is_number(*ptr)){
+                std::string msg{};
+                msg.append("exit(): conversion failed: string is not convertable to number\n");
+                msg.append(std::format("\tLine {}: {}", stmt->line, lines.at(stmt->line - 1)));
                 throwFatalException(ExceptionSource::VirtualEnv,
                                     ExceptionType::ConversionError,
-                                    "exit(): conversion failed: string is not convertable to number");
+                                    msg);
+            }
             exitcode = std::stol(*ptr);
             break;
         }

@@ -7,30 +7,11 @@
 
 #include <main/file.hpp>
 #include <arena_alloc/arena.hpp>
+#include <parser/tokens.hpp>
 
 namespace HSharpParser {
-    enum class TokenType {
-        TOK_EXIT,
-        TOK_VAR,
-        TOK_PRINT,
-        TOK_INPUT,
-        TOK_INT_LIT,
-        TOK_STR_LIT,
-        TOK_SEMICOLON,
-        TOK_PLUS,
-        TOK_MINUS,
-        TOK_FSLASH,
-        TOK_MUL_SIGN,
-        TOK_EQUALITY_SIGN,
-        TOK_PAREN_OPEN,
-        TOK_PAREN_CLOSE,
-        TOK_CURLY_OPEN,
-        TOK_CURLY_CLOSE,
-        TOK_IDENT,
-        TOK_IF
-    };
-
     struct Token {
+        uint32_t line;
         TokenType ttype{};
         std::optional<std::string> value{};
     };
@@ -56,12 +37,15 @@ namespace HSharpParser {
     /* Base nodes declarations */
     struct NodeTermIntLit {
         Token int_lit;
+        uint32_t line;
     };
     struct NodeTermIdent {
         Token ident;
+        uint32_t line;
     };
     struct NodeExpressionStrLit {
         Token str_lit;
+        uint32_t line;
     };
 
     struct NodeBinExpr {
@@ -69,15 +53,18 @@ namespace HSharpParser {
                     NodeBinExprSub*,
                     NodeBinExprMul*,
                     NodeBinExprDiv*> var;
+        uint32_t line;
     };
 
     struct NodeTerm {
         std::variant<NodeTermIntLit*, NodeTermIdent*> term;
+        uint32_t line;
     };
 
     /* Basic expression node, includes all possible expressions */
     struct NodeExpression {
         std::variant<NodeTerm*, NodeExpressionStrLit*, NodeBinExpr*> expr;
+        uint32_t line;
     };
 
     /* Binary expressions */
@@ -100,6 +87,7 @@ namespace HSharpParser {
     };
     struct NodeStmtExit {
         NodeExpression* expr;
+        uint32_t line;
     };
     struct NodeStmtPrint {
         NodeExpression* expr;
@@ -121,6 +109,7 @@ namespace HSharpParser {
                     NodeStmtInput*,
                     NodeStmtVar*,
                     NodeStmtVarAssign*> statement;
+        uint32_t line;
     };
 
     /* Start of AST */
@@ -136,6 +125,7 @@ namespace HSharpParser {
         [[nodiscard]] std::optional<char> peek(int offset = 0) const;
 
         char consume();
+        void skip(int count = 1);
 
     public:
         explicit Tokenizer(File &file) : file(file){}
@@ -145,12 +135,13 @@ namespace HSharpParser {
 
     class Parser {
     private:
-        const std::vector<Token> tokens;
+        const std::vector<Token>& tokens;
+        const std::vector<std::string>& lines;
         std::size_t index = 0;
         ArenaAllocator allocator;
 
         [[nodiscard]] std::optional<Token> peek(int offset = 0) const;
-        Token try_consume(TokenType type, const char* err_msg);
+        Token try_consume(TokenType type, int mode);
         std::optional<Token> try_consume(TokenType type);
         Token consume();
         void skip(int count = 1);
@@ -161,7 +152,10 @@ namespace HSharpParser {
         std::optional<NodeTerm*> parse_term();
 
     public:
-        explicit Parser(std::vector<Token> tokens) : tokens(std::move(tokens)), allocator(1024 * 1024 * 4) {}
+        explicit Parser(std::vector<Token>& tokens, std::vector<std::string>& lines) :
+        tokens(tokens),
+        lines(lines),
+        allocator(1024 * 1024 * 4) {}
 
         std::optional<NodeProgram> parse_program();
     };

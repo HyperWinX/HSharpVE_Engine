@@ -6,6 +6,7 @@
 #include <version.hpp>
 #include <parser/parser.hpp>
 #include <main/file.hpp>
+#include <main/string_split.h>
 #include <ve/ve.hpp>
 #include <argparse/argparse.hpp>
 
@@ -53,14 +54,18 @@ int main(int argc, char *argv[]) {
     HSharpParser::Tokenizer tokenizer(source_file);
     std::vector<Token> tokens = tokenizer.tokenize();
 
-    HSharpParser::Parser parser(tokens);
+    std::vector<std::string> lines;
+    split_string(source_file.contents.value(), lines);
+    source_file.contents->clear();
+
+    HSharpParser::Parser parser(tokens, lines);
     std::optional<HSharpParser::NodeProgram> root = parser.parse_program();
     if (!root.has_value()) {
         std::cerr << "Parsing failed!\n";
         exit(1);
     }
 
-    HSharpVE::VirtualEnvironment ve(root.value(), argparser["-v, --verbose"] == true);
+    HSharpVE::VirtualEnvironment ve(root.value(), lines, argparser["-v, --verbose"] == true);
     ve.run();
     // Exit point
     input.close();

@@ -18,20 +18,6 @@ using HSharpParser::NodeStmtVarAssign;
 using HSharpParser::NodeExpressionStrLit;
 
 namespace HSharpVE {
-    /* Exception handling */
-    enum class ExceptionSource{
-        Tokenizer,
-        Parser,
-        VirtualEnv
-    };
-    enum class ExceptionType{
-        SyntaxError,
-        TypeError,
-        InvalidAssign,
-        NotImplemented,
-        ConversionError
-    };
-
     enum class VariableType {
         INT,
         STRING
@@ -46,6 +32,7 @@ namespace HSharpVE {
     struct ValueInfo {
         VariableType type;
         void* value;
+        uint32_t line;
         bool dealloc_required;
     };
 
@@ -90,6 +77,7 @@ namespace HSharpVE {
             ValueInfo operator()(const HSharpParser::NodeBinExprDiv* expr) const;
         };
         HSharpParser::NodeProgram root;
+        std::vector<std::string>& lines;
         Scope global_scope;
         boost::object_pool<std::int64_t> integers_pool;
         boost::pool<> strings_pool;
@@ -116,10 +104,13 @@ namespace HSharpVE {
         void delete_var_value(Variable& variable);
         void* allocate(VariableType vtype);
 
+        template <typename... Args>
+        std::string vformat_wrapper(const char* format, Args&&... args);
         static bool is_number(const std::string& s);
     public:
-        explicit VirtualEnvironment(HSharpParser::NodeProgram root, const bool verbose)
+        explicit VirtualEnvironment(HSharpParser::NodeProgram root, std::vector<std::string>& lines, const bool verbose)
             : root(std::move(root)),
+              lines(lines),
               integers_pool(16),
               strings_pool(sizeof(std::string)),
               verbose(verbose){
