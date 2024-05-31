@@ -7,64 +7,66 @@
 #include <parser/parser.hpp>
 #include <ve/exceptions.hpp>
 
+static constexpr char* parser_fail_msg = "Parser failed to parse expression.\n";
+
 std::optional<HSharpParser::NodeBinExpr *> HSharpParser::Parser::parse_bin_expr() {
-    if (auto lhs = parse_expression()) {
-        auto bin_expr = allocator.alloc<NodeBinExpr>();
-        if (peek().has_value() && peek().value().ttype == TokenType::TOK_PLUS) {
-            auto bin_expr_sub = allocator.alloc<NodeBinExprAdd>();
-            bin_expr_sub->lhs = lhs.value();
+    std::string msg{};
+    HSharpVE::ExceptionType exc_type;
+    std::optional<NodeExpression*> lhs;
+    NodeBinExpr* bin_expr;
+    if (!(lhs = parse_expression())) {
+        msg.append(parser_fail_msg);
+        exc_type = HSharpVE::ExpressionParseError;
+        goto error;
+    }
+
+    bin_expr = allocator.alloc<NodeBinExpr>();
+    if (!peek().has_value()){
+        msg.append(parser_fail_msg);
+        exc_type = HSharpVE::EndOfFile;
+        goto error;
+    }
+    switch (peek()->ttype){
+        case TOK_PLUS:{
+            auto bin_expr_add = allocator.alloc<NodeBinExprAdd>();
+            bin_expr_add->lhs = lhs.value();
             skip();
-            if (auto rhs = parse_expression()) {
-                bin_expr_sub->rhs = rhs.value();
-                bin_expr->var = bin_expr_sub;
-                return bin_expr;
-            } else {
-                std::cerr << "Cannot parse binary expression: invalid expression" << std::endl;
-                exit(1);
-            }
-        } else if (peek().has_value() && peek().value().ttype == TokenType::TOK_MINUS) {
+            bin_expr_add->rhs = parse_expression().value();
+            bin_expr->var = bin_expr_add;
+            return bin_expr;
+        }
+        case TOK_MINUS:{
             auto bin_expr_sub = allocator.alloc<NodeBinExprSub>();
             bin_expr_sub->lhs = lhs.value();
             skip();
-            if (auto rhs = parse_expression()) {
-                bin_expr_sub->rhs = rhs.value();
-                bin_expr->var = bin_expr_sub;
-                return bin_expr;
-            } else {
-                std::cerr << "Cannot parse binary expression: invalid expression" << std::endl;
-                exit(1);
-            }
-        } else if (peek().has_value() && peek().value().ttype == TokenType::TOK_MUL_SIGN) {
+            bin_expr_sub->rhs = parse_expression().value();
+            bin_expr->var = bin_expr_sub;
+            return bin_expr;
+        }
+        case TOK_MUL_SIGN:{
             auto bin_expr_mul = allocator.alloc<NodeBinExprMul>();
             bin_expr_mul->lhs = lhs.value();
             skip();
-            if (auto rhs = parse_expression()) {
-                bin_expr_mul->rhs = rhs.value();
-                bin_expr->var = bin_expr_mul;
-                return bin_expr;
-            } else {
-                std::cerr << "Cannot parse binary expression: invalid expression" << std::endl;
-                exit(1);
-            }
-        } else if (peek().has_value() && peek().value().ttype == TokenType::TOK_FSLASH) {
+            bin_expr_mul->rhs = parse_expression().value();
+            bin_expr->var = bin_expr_mul;
+            return bin_expr;
+        }
+        case TOK_FSLASH:{
             auto bin_expr_div = allocator.alloc<NodeBinExprDiv>();
             bin_expr_div->lhs = lhs.value();
-            consume();
-            if (auto rhs = parse_expression()) {
-                bin_expr_div->rhs = rhs.value();
-                bin_expr->var = bin_expr_div;
-                return bin_expr;
-            } else {
-                std::cerr << "Cannot parse binary expression: invalid expression" << std::endl;
-                exit(1);
-            }
-        } else {
-            std::cerr << "Cannot parse binary expression: invalid expression" << std::endl;
-            exit(1);
+            skip();
+            bin_expr_div->rhs = parse_expression().value();
+            bin_expr->var = bin_expr_div;
+            return bin_expr;
         }
-    } else {
-        return {};
+        default:
+            msg.append(parser_fail_msg);
+            exc_type = HSharpVE::ExpressionParseError;
+            goto error;
     }
+
+    error:
+    throwFatalException(HSharpVE::Tokenizer, exc_type, msg);
 }
 
 std::optional<HSharpParser::NodeTerm*> HSharpParser::Parser::parse_term() {

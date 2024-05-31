@@ -98,7 +98,7 @@ std::vector<Token> HSharpParser::Tokenizer::tokenize() {
         } else {
             throwFatalException(HSharpVE::ExceptionSource::Tokenizer,
                                 HSharpVE::ExceptionType::SyntaxError,
-                                "Detected invalid syntax.");
+                                "Detected invalid syntax: invalid token");
         }
     }
 
