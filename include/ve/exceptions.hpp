@@ -37,6 +37,7 @@ DEFINE_ENUM_WITH_STRING_CONVERSIONS(ExceptionType,
 (NotImplemented)\
 (ConversionError)\
 (ExpressionParseError)\
+(StatementParseError)\
 (UnexpectedToken)\
 (EndOfFile));
 }

@@ -1,13 +1,10 @@
 #include <optional>
 #include <iostream>
-#include <valarray>
-
-#include <boost/preprocessor.hpp>
 
 #include <parser/parser.hpp>
 #include <ve/exceptions.hpp>
 
-static constexpr char* parser_fail_msg = "Parser failed to parse expression.\n";
+static constexpr char parser_fail_msg[] = "Parser failed to parse expression.\n";
 
 std::optional<HSharpParser::NodeBinExpr *> HSharpParser::Parser::parse_bin_expr() {
     std::string msg{};
@@ -70,22 +67,30 @@ std::optional<HSharpParser::NodeBinExpr *> HSharpParser::Parser::parse_bin_expr(
 }
 
 std::optional<HSharpParser::NodeTerm*> HSharpParser::Parser::parse_term() {
-    if (auto int_lit = try_consume(TokenType::TOK_INT_LIT)) {
-        auto term_int_lit = allocator.alloc<NodeTermIntLit>();
-        auto expr = allocator.alloc<NodeTerm>();
-        term_int_lit->int_lit = int_lit.value();
-        expr->term = term_int_lit;
-        expr->line = int_lit.value().line;
-        return expr;
-    } else if (auto ident = try_consume(TokenType::TOK_IDENT)) {
-        auto term_ident = allocator.alloc<NodeTermIdent>();
-        auto expr = allocator.alloc<NodeTerm>();
-        term_ident->ident = ident.value();
-        expr->term = term_ident;
-        expr->line = ident.value().line;
-        return expr;
+    switch (peek()->ttype){
+        case TOK_INT_LIT:{
+            std::optional<Token> int_lit = consume();
+            auto term_int_lit = allocator.alloc<NodeTermIntLit>();
+            auto expr = allocator.alloc<NodeTerm>();
+            term_int_lit->int_lit = int_lit.value();
+            expr->term = term_int_lit;
+            expr->line = int_lit.value().line;
+            return expr;
+        }
+        case TOK_IDENT:{
+            std::optional<Token> ident = consume();
+            auto term_ident = allocator.alloc<NodeTermIdent>();
+            auto expr = allocator.alloc<NodeTerm>();
+            term_ident->ident = ident.value();
+            expr->term = term_ident;
+            expr->line = ident.value().line;
+            return expr;
+        }
+        default: break;
     }
-    return {};
+    throwFatalException(HSharpVE::Parser,
+                        HSharpVE::ExpressionParseError,
+                        parser_fail_msg);
 }
 
 
@@ -95,18 +100,17 @@ std::optional<HSharpParser::NodeExpression *> HSharpParser::Parser::parse_expres
             auto bin_expr = allocator.alloc<NodeBinExpr>();
             auto bin_expr_add = allocator.alloc<NodeBinExprAdd>();
             auto lhs_expr = allocator.alloc<NodeExpression>();
+            std::optional<NodeExpression*> rhs;
             lhs_expr->expr = term.value();
             bin_expr_add->lhs = lhs_expr;
-            if (auto rhs = parse_expression()) {
-                auto expr = allocator.alloc<NodeExpression>();
-                bin_expr_add->rhs = rhs.value();
-                bin_expr->var = bin_expr_add;
-                expr->expr = bin_expr;
-                return expr;
-            } else {
-                std::cerr << "Cannot parse binary expression: invalid expression" << std::endl;
-                exit(1);
-            }
+
+            if (!(rhs = parse_expression())) goto error;
+
+            auto expr = allocator.alloc<NodeExpression>();
+            bin_expr_add->rhs = rhs.value();
+            bin_expr->var = bin_expr_add;
+            expr->expr = bin_expr;
+            return expr;
         } else {
             auto expr = allocator.alloc<NodeExpression>();
             expr->expr = term.value();
@@ -124,34 +128,34 @@ std::optional<HSharpParser::NodeExpression *> HSharpParser::Parser::parse_expres
         auto expr = allocator.alloc<NodeExpression>();
         expr->expr = bin_expr.value();
         return expr;
-    } else {
-        std::string msg{};
-        msg.append("Parser failed to parse expression.\n");
-        msg.append(std::format("Last token: {}", ToString(tokens[index].ttype)));
-        throwFatalException(HSharpVE::ExceptionSource::Parser,
-                            HSharpVE::ExceptionType::ExpressionParseError,
-                            msg);
     }
+
+    error:
+    std::string msg{};
+    msg.append("Parser failed to parse expression.\n");
+    msg.append(std::format("Last token: {}", ToString(tokens[index].ttype)));
+    throwFatalException(HSharpVE::ExceptionSource::Parser,
+                        HSharpVE::ExceptionType::ExpressionParseError,
+                        msg);
 }
 
 std::optional<HSharpParser::NodeStmt *> HSharpParser::Parser::parse_statement() {
     if (peek().has_value() && peek().value().ttype == TokenType::TOK_EXIT &&
         peek(1).has_value() && peek(1).value().ttype == TokenType::TOK_PAREN_OPEN) {
         auto stmt_exit = allocator.alloc<NodeStmtExit>();
+        auto node_stmt = allocator.alloc<NodeStmt>();
+        std::optional<NodeExpression*> node_expr;
         stmt_exit->line = consume().line;
         skip();
-        if (auto node_expr = parse_expression()) {
-            stmt_exit->expr = node_expr.value();
-            stmt_exit->line = node_expr.value()->line;
-        } else {
-            std::cerr << "Evaluation of expression is impossible: invalid expression.\n";
-            exit(1);
-        }
+
+        if (!(node_expr = parse_expression())) goto error;
+
+        stmt_exit->expr = node_expr.value();
+        stmt_exit->line = node_expr.value()->line;
 
         try_consume(TokenType::TOK_PAREN_CLOSE, 1);
         try_consume(TokenType::TOK_SEMICOLON, 1);
 
-        auto node_stmt = allocator.alloc<NodeStmt>();
         node_stmt->statement = stmt_exit;
         node_stmt->line = stmt_exit->line;
         return node_stmt;
@@ -186,40 +190,39 @@ std::optional<HSharpParser::NodeStmt *> HSharpParser::Parser::parse_statement() 
                peek(2).has_value() && peek(2).value().ttype == TokenType::TOK_EQUALITY_SIGN) {
         skip();
         auto node_stmt_var = allocator.alloc<NodeStmtVar>();
+        auto node_stmt = allocator.alloc<NodeStmt>();
+        std::optional<NodeExpression*> expr;
         node_stmt_var->ident = consume();
         skip();
-        if (auto expr = parse_expression()) {
-            node_stmt_var->expr = expr.value();
-        } else {
-            std::cerr << "Invalid expression!\n";
-            exit(1);
-        }
+        if (!(expr = parse_expression())) goto error;
+
+        node_stmt_var->expr = expr.value();
 
         try_consume(TokenType::TOK_SEMICOLON, 1);
 
-        auto node_stmt = allocator.alloc<NodeStmt>();
         node_stmt->statement = node_stmt_var;
         return node_stmt;
     } else if (peek().has_value() && peek().value().ttype == TokenType::TOK_IDENT &&
                 peek(1).has_value() && peek(1).value().ttype == TokenType::TOK_EQUALITY_SIGN) {
         auto node_stmt = allocator.alloc<NodeStmtVarAssign>();
+        auto stmt = allocator.alloc<NodeStmt>();
+        std::optional<NodeExpression*> expr;
         node_stmt->ident = consume();
         skip();
-        if (auto expr = parse_expression())
-            node_stmt->expr = expr.value();
-        else {
-            std::cerr << "Failed to parse expression\n";
-            exit(1);
-        }
+        if (!(expr = parse_expression())) goto error;
+
+        node_stmt->expr = expr.value();
 
         try_consume(TokenType::TOK_SEMICOLON, 1);
 
-        auto stmt = allocator.alloc<NodeStmt>();
         stmt->statement = node_stmt;
         return stmt;
-    } else {
-        return {};
     }
+
+    error:
+    throwFatalException(HSharpVE::Parser,
+                        HSharpVE::ExpressionParseError,
+                        parser_fail_msg);
 }
 
 
@@ -227,12 +230,12 @@ std::optional<HSharpParser::NodeProgram> HSharpParser::Parser::parse_program() {
     NodeProgram program;
     while (peek().has_value()) {
         std::optional<NodeStmt*> stmt = parse_statement();
-        if (stmt.has_value()) {
-            program.statements.push_back(stmt.value());
-        } else {
-            std::cerr << "Invalid statement!\n";
-            exit(1);
-        }
+        if (!stmt.has_value())
+            throwFatalException(HSharpVE::Parser,
+                                HSharpVE::ExceptionType::StatementParseError,
+                                "Parser failed to parse statement");
+
+        program.statements.push_back(stmt.value());
     }
     return program;
 }
