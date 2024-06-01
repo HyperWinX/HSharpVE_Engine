@@ -2,8 +2,10 @@ cmake_minimum_required(VERSION 3.28)
 
 project(HSharpVE LANGUAGES CXX C VERSION 0.0)
 
-set(MAIN_SRC src/main/main.cpp PARENT_SCOPE)
-list(APPEND MAIN_SRC main/string_split.cpp)
+set(MAIN_SRC
+    src/main/main.cpp
+    src/main/string_split.cpp
+PARENT_SCOPE)
 
 set(PARSER_SRC parser/helpers.cpp)
 list(APPEND PARSER_SRC parser/parser.cpp)
