@@ -1,4 +1,6 @@
+# Build files
 .ccls-cache
+.cache
 build
 compile_commands.json
 test.hv

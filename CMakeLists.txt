@@ -1,24 +1,31 @@
 cmake_minimum_required(VERSION 3.28)
-project(HSharpVE)
+
+project(HSharpVE LANGUAGES CXX C VERSION 0.0)
 
 set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-#Project setup
-include_directories(include)
-set(ALL_SRCS
-        src/main/main.cpp
-        src/parser/helpers.cpp
-        src/parser/parser.cpp
-        src/parser/tokenizer.cpp
-        src/ve/ve_main.cpp
-        src/ve/exceptions.cpp
-        src/ve/stdlib.cpp
-        src/main/string_split.cpp)
-#Debug target
-add_executable(hve_ng-debug ${ALL_SRCS})
-set_target_properties(hve_ng-debug PROPERTIES COMPILE_FLAGS "-Wall -O0 -ggdb3 -fsanitize=address -fsanitize=leak -fsanitize=undefined")
-target_link_options(hve_ng-debug PUBLIC -lasan -fsanitize=address -fsanitize=leak -fsanitize=undefined)
-#Release target
-add_executable(hve_ng-release ${ALL_SRCS})
-set_target_properties(hve_ng-release PROPERTIES COMPILE_FLAGS "-Wall -O2 -fdata-sections -ffunction-sections -Wl,--gc-sections")
-add_custom_command(TARGET hve_ng-release COMMAND POST_BUILD strip -s hve_ng-release)
+set(INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
+
+# Compilation flags
+set(DEBUG_COMPILE_FLAGS "-Wall -O0 -ggdb3 -fsanitize=address -fsanitize=leak -fsanitize=undefined")
+# TODO: fix linker error
+set(DEBUG_LINKER_FLAGS "LINKER:-lasan,-fsanitize=address,-fsanitize=leak,-fsanitize=undefined")
+set(RELEASE_COMPILE_FLAGS "-Wall -O2 -fdata-sections -ffunction-sections -Wl,--gc-sections")
+
+add_subdirectory(src)
+
+add_executable(hve-ng ${MAIN_SRC})
+
+target_include_directories(hve-ng PUBLIC ${INCLUDE_DIR})
+target_link_libraries(hve-ng PRIVATE parser ve)
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(CMAKE_CXX_FLAGS ${DEBUG_COMPILE_FLAGS})
+    # target_link_options(hve-ng PRIVATE ${DEBUG_LINKER_FLAGS})
+elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(CMAKE_CXX_FLAGS ${RELEASE_COMPILE_FLAGS})
+    add_custom_command(TARGET hve-ng COMMAND POST_BUILD strip -s hve-ng)
+endif()
