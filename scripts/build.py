@@ -5,6 +5,7 @@ import sys
 import shutil
 import argparse
 import subprocess
+import multiprocessing
 
 
 usage = """
@@ -18,6 +19,7 @@ Usage
        --dir            specify build directory
        --config CONFIG  run for specified config. (Release, Debug) Default - only Debug.
                         You might invoke this multiple times.
+       --link           create symlink in project root to Debug compile commands.
 
 """
 
@@ -46,7 +48,14 @@ def configure(args: argparse.Namespace) -> None:
     print('running cmake with args: ' + ', '.join(cmake_args))
     for config in configs:
         print(f'running configure command for config {config}...')
-        subprocess.run(['cmake', f'-B{directory}/{config}', f'-S{os.curdir}', f'-DCMAKE_BUILD_TYPE={config}', *cmake_args], encoding='UTF-8', stderr=subprocess.STDOUT)
+        subprocess.run([
+                'cmake', 
+                f'-B{directory}/{config}', 
+                f'-S{os.curdir}', 
+                f'-DCMAKE_BUILD_TYPE={config}', 
+                *cmake_args
+            ], encoding='UTF-8', stderr=subprocess.STDOUT
+        )
 
 
 def build(args: argparse.Namespace) -> None:
@@ -65,7 +74,14 @@ def build(args: argparse.Namespace) -> None:
     
     for config in configs:
         print(f'running build command for config {config}...')
-        subprocess.run(['cmake', '--build', f'{directory}/{config}'], encoding='UTF-8', stderr=subprocess.STDOUT)
+        subprocess.run([
+                'cmake', 
+                '--build', 
+                f'{directory}/{config}', 
+                '-j', 
+                str(multiprocessing.cpu_count())
+            ], encoding='UTF-8', stderr=subprocess.STDOUT
+        )
 
 
 def cmake_var_decorator(var: str, value: str, type: str = 'STRING') -> str:
@@ -82,6 +98,13 @@ def utility_check(name: str) -> None:
     print('ok', locations_string, sep='\n', end='\n')
 
 
+def link_compile_commands(path: str) -> None:
+    if os.path.exists('compile_commands.json'):
+        print('compile commands file exists, skipping link creation')
+    os.symlink(path, 'compile_commands.json')
+    print('symlink created')
+
+
 def parse_cli_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         add_help=False
@@ -92,6 +115,7 @@ def parse_cli_args() -> argparse.Namespace:
     parser.add_argument('-f', '--force', action='store_true', dest='force')
     parser.add_argument('--dir', action='store', dest='directory')
     parser.add_argument('--config', action='append', dest='config')
+    parser.add_argument('--link', action='store_true', dest='link')
     return parser.parse_args()
 
 
@@ -121,5 +145,9 @@ if __name__ == '__main__':
     if getattr(args, 'build'):
         print('invoking build routine.')
         build(args)
+
+    if getattr(args, 'link'):
+        directory, _ = get_common(args)
+        link_compile_commands(directory + '/Debug/compile_commands.json')
 
     print('finished.')
