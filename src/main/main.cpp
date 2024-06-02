@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <memory>
 #include <vector>
 #include <filesystem>
 
@@ -9,6 +10,7 @@
 #include <main/string_split.h>
 #include <ve/ve.hpp>
 #include <argparse/argparse.hpp>
+#include <main/arguments_handler.hpp>
 
 using HSharpParser::Token;
 using HSharpParser::NodeExit;
@@ -16,25 +18,23 @@ using HSharpParser::NodeExit;
 void DisplayHelp(const char*);
 
 int main(int argc, char *argv[]) {
-    std::string filename;
-    argparse::ArgumentParser argparser(argv[0], VERSION, argparse::default_arguments::help);
-    argparser.add_argument("file").help("File to execute").metavar("PROGRAM").store_into(filename).required();
-    argparser.add_argument("--version").help("display HSharpVE version").default_value(false).implicit_value(true);
-    argparser.add_argument("-v, --verbose").help("enable high verbosity level").default_value(false);
-    try {
-        argparser.parse_args(argc, argv);
-    } catch (std::exception& exception) {
-        std::cout << argparser;
-        exit(1);
+    // handle CLI args
+    hsharp::ArgumentsHandler argsHandler;
+    argsHandler.parse(std::make_unique<hsharp::ArgumentsHandler::SIOArgumentsAccessor>(), argc, argv);
+    const hsharp::CLIRegistry& registry = argsHandler.registry();
+
+    for (const hsharp::EDirective& directive : registry.getDirectives()) {
+        switch (directive) {
+            case hsharp::EDirective::HELP:
+                hsharp::displayHelp(std::cout);
+                return 0;
+            case hsharp::EDirective::VERSION:
+                hsharp::displayVersion(std::cout);
+                return 0;
+        }
     }
-    if (argparser["--version"] == true) {
-        std::printf("%s version %s, main developer: %s, build date: %s %s\n", NAME, VERSION, MAINTAINER, __DATE__, __TIME__);
-        exit(0);
-    } else if (argparser["--help"] == true) {
-        std::cout << argparser;
-        //DisplayHelp(argv[0]);
-        exit(0);
-    }
+
+    std::string filename = registry.getFilename();
 
     std::ifstream input(filename, std::ios::binary | std::ios::ate);
     if (!input.is_open()) {
@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    HSharpVE::VirtualEnvironment ve(root.value(), lines, argparser["-v, --verbose"] == true);
+    HSharpVE::VirtualEnvironment ve(root.value(), lines, true); // for now
     ve.run();
     // Exit point
     input.close();

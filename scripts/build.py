@@ -101,6 +101,7 @@ def utility_check(name: str) -> None:
 def link_compile_commands(path: str) -> None:
     if os.path.exists('compile_commands.json'):
         print('compile commands file exists, skipping link creation')
+        return
     os.symlink(path, 'compile_commands.json')
     print('symlink created')
 
