@@ -1,5 +1,5 @@
 #pragma once
 
-#define MAINTAINER "HyperWin"
-#define NAME "HSharpVE_Engine"
-#define VERSION "0.1a"
+#define HSHARP_MAINTAINER "HyperWin"
+#define HSHARP_NAME "HSharpVE_Engine"
+#define HSHARP_VERSION "0.1a"
