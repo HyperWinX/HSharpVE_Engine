@@ -15,8 +15,6 @@
 using HSharpParser::Token;
 using HSharpParser::NodeExit;
 
-void DisplayHelp(const char*);
-
 int main(int argc, char *argv[]) {
     // handle CLI args
     hsharp::ArgumentsHandler argsHandler;
@@ -69,12 +67,4 @@ int main(int argc, char *argv[]) {
     ve.run();
     // Exit point
     input.close();
-}
-
-void DisplayHelp(const char* program_name) {
-    std::printf("Usage: %s <file> [option(s)]\n", program_name);
-    std::puts("Options:");
-    std::puts("  --version       Display info about version");
-    std::puts("  -h, --help      Display this menu");
-    std::puts("  -v, --verbose   Set high verbosity level - get more info");
 }
