@@ -39,3 +39,4 @@ test.hv
 *.app
 .idea
 cmake-build-debug
+venv
