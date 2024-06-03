@@ -127,19 +127,22 @@ namespace hsharp {
 
             static constexpr int magicArgCount = -1;
 
-            // States of CLI Parser
-            enum class EExpectsNext : std::int_fast8_t {
-                ARGUMENT,
-                FLAG
-            } expectation_;
-
-            std::vector<std::string> eat_n(const char* const* tokens, int n, int max);
-            std::vector<std::string> eat_while(const char* const* tokens, int max, std::function<bool(const char*)> predicate);
+            int parseArgs(std::string option, std::vector<std::string> tokens);
+            std::vector<std::string> eat_n(int position, int n);
+            std::vector<std::string> eat_while(int position, std::function<bool(const char*)> predicate);
+            void handleArgs(int& position);
+            void handleFlag(int& position);
             void matchShortFlag(const char* token);
             void matchLongFlag(const char* token);
             void fallback(const std::string& message);
             
         private:
+
+            struct Pipe {
+                const char* const* data;
+                int size;
+            } pipe_;
+
             std::map<std::string, ArgumentType> args_;
             std::string option_;
             Token current_;
