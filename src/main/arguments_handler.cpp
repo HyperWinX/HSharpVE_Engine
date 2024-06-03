@@ -1,4 +1,5 @@
 // STD
+#include <iterator>
 #include <memory>
 #include <format>
 #include <string>
@@ -101,7 +102,12 @@ void hsharp::ArgumentsHandler::handleDirectives(Parser& parser, std::unique_ptr<
 }
 
 void hsharp::ArgumentsHandler::handleVariables(Parser& parser, std::unique_ptr<CLIRegistry::IArgumentsAccessor>& accessor) noexcept {
-    accessor->set("filename", std::get<std::vector<std::string>>(parser.access("files")).front()); // for now
+    auto files = std::get<std::vector<std::string>>(parser.access("files"));
+    if (files.size()) {
+        accessor->set("filename", std::get<std::vector<std::string>>(parser.access("files")).front()); // for now
+        return;
+    }
+    accessor->set("filename", "");
 }
 
 void hsharp::displayHelp(std::ostream& os) {
@@ -118,8 +124,7 @@ void hsharp::displayVersion(std::ostream& os) {
 }
 
 hsharp::ArgumentsHandler::Parser::Parser()
-: expectation_(EExpectsNext::ARGUMENT)
-, option_("files")
+: option_("files")
 , current_(magicArgCount, false)
 {}
 
@@ -128,49 +133,13 @@ const ArgumentType& hsharp::ArgumentsHandler::Parser::access(const std::string& 
 }
 
 void hsharp::ArgumentsHandler::Parser::parse(const char* const* argv_, int argc_) {
-    auto parseArgRegistry = [this](std::string option, std::vector<std::string> tokens) {
-        if (current_.args == magicArgCount || current_.args > 1) {
-            args_[option] = std::move(tokens);
-        } else {
-            args_[option] = tokens.front();
-        }
-    };
+    pipe_ = {argv_, argc_};
 
-    for (int i = 1; i < argc_; ++i) {
-        const char* token = argv_[i];
-        switch (expectation_) {
-            case EExpectsNext::FLAG:
-                if (std::string_view(token).starts_with("--")) {
-                    matchLongFlag(token);
-                } else if (std::string_view(token).starts_with("-")) {
-                    matchShortFlag(token);
-                } else {
-                    fallback(std::vformat("flag {} does not start with one or two dashes", std::make_format_args(token)));
-                }
-                expectation_ = EExpectsNext::ARGUMENT;
-                break;
-            case EExpectsNext::ARGUMENT:
-                if (current_.args == magicArgCount || current_.args) {
-                    std::vector<std::string> registry;
-                    if (current_.args == magicArgCount) {
-                        registry = eat_while(argv_ + i, argc_ - i, [](const char* token) {
-                            return std::string_view(token).starts_with('-');
-                        });
-                    } else {
-                        registry = eat_n(argv_ + i, current_.args, argc_ - i);
-                    }
-                    parseArgRegistry(option_, registry);
-                    i += registry.size() - 1;
-                } else {
-                    args_[option_] = true;
-                }
-                expectation_ = EExpectsNext::FLAG;
-                break;
-        }
-    }
-
-    if (!current_.args) {
-        args_[option_] = true;
+    int position = 1;
+    handleArgs(position);
+    while (position < pipe_.size) {
+        handleFlag(position);
+        handleArgs(position);
     }
 
     for (const auto& item : matcher_) {
@@ -180,26 +149,63 @@ void hsharp::ArgumentsHandler::Parser::parse(const char* const* argv_, int argc_
     }
 }
 
-std::vector<std::string> hsharp::ArgumentsHandler::Parser::eat_n(const char* const* tokens, int n, int max) {
-    if (max < n) {
+void hsharp::ArgumentsHandler::Parser::handleFlag(int& position) {
+    const char* token = pipe_.data[position++];
+    if (std::string_view(token).starts_with("--")) {
+        matchLongFlag(token);
+    } else if (std::string_view(token).starts_with("-")) {
+        matchShortFlag(token);
+    } else {
+        fallback(std::vformat("flag {} does not start with one or two dashes", std::make_format_args(token)));
+    }
+}
+
+void hsharp::ArgumentsHandler::Parser::handleArgs(int& position) {
+    if (current_.args == magicArgCount || current_.args) {
+        std::vector<std::string> registry;
+        if (current_.args == magicArgCount) {
+            registry = eat_while(position, [](const char* token) {
+                return !std::string_view(token).starts_with('-');
+            });
+        } else {
+            registry = eat_n(position, current_.args);
+        }
+        position += parseArgs(option_, registry);
+    } else {
+        args_[option_] = true;
+    }
+}
+
+int hsharp::ArgumentsHandler::Parser::parseArgs(std::string option, std::vector<std::string> tokens) {
+    if (current_.args == magicArgCount || current_.args > 1) {
+        auto size = tokens.size();
+        args_[option] = std::move(tokens);
+        return size;
+    } else {
+        args_[option] = tokens.front();
+        return 1;
+    }
+}
+
+std::vector<std::string> hsharp::ArgumentsHandler::Parser::eat_n(int position, int n) {
+    if (pipe_.size < position + n) {
+        int outOfBounds = position + n;
         fallback(std::vformat(
-            "not enough args in pipe, requested: {}, got: {}", 
-            std::make_format_args(n, max))
+            "not enough data chunks in pipe, shift: {}, can provide: {}", 
+            std::make_format_args(outOfBounds, pipe_.size))
         );
     }
-    std::vector<std::string> args;
-    for (int i = 0; i < n; ++i) {
-        args.push_back(tokens[i]);
-    }
+    std::vector<std::string> args (n);
+    std::copy(pipe_.data + position, pipe_.data + position + n, args.begin());
     return args;
 }
 
-std::vector<std::string> hsharp::ArgumentsHandler::Parser::eat_while(const char* const* tokens, int max, std::function<bool(const char*)> predicate) {
-    int i = 0;
+std::vector<std::string> hsharp::ArgumentsHandler::Parser::eat_while(int position, std::function<bool(const char*)> predicate) {
+    int i = position;
     std::vector<std::string> args;
-    while (!predicate(tokens[i])) {
-        args.push_back(tokens[i]);
-        if (++i >= max) {
+    while (predicate(pipe_.data[i])) {
+        args.push_back(pipe_.data[i]);
+        if (++i >= pipe_.size) {
             break;
         }
     }
