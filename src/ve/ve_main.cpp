@@ -26,10 +26,10 @@ void HSharpVE::VirtualEnvironment::StatementVisitor::operator()(HSharpParser::No
 void HSharpVE::VirtualEnvironment::StatementVisitor::operator()(HSharpParser::NodeStmtVarAssign *stmt) const {
     parent->StatementVisitor_StatementVarAssign(stmt);
 }
-HSharpVE::ValueInfo HSharpVE::VirtualEnvironment::ExpressionVisitor::operator()(HSharpParser::NodeTerm *term) const {
+HSharp::ValueInfo HSharpVE::VirtualEnvironment::ExpressionVisitor::operator()(HSharpParser::NodeTerm *term) const {
     return std::visit(parent->termvisitor, term->term);
 }
-HSharpVE::ValueInfo HSharpVE::VirtualEnvironment::ExpressionVisitor::operator()(const HSharpParser::NodeExpressionStrLit *expr) const {
+HSharp::ValueInfo HSharpVE::VirtualEnvironment::ExpressionVisitor::operator()(const HSharpParser::NodeExpressionStrLit *expr) const {
     auto str = static_cast<std::string*>(parent->strings_pool.malloc());
     str = new(str)std::string(expr->str_lit.value.value());
     return ValueInfo{
@@ -39,10 +39,10 @@ HSharpVE::ValueInfo HSharpVE::VirtualEnvironment::ExpressionVisitor::operator()(
             .dealloc_required = true
     };
 }
-HSharpVE::ValueInfo HSharpVE::VirtualEnvironment::ExpressionVisitor::operator()(HSharpParser::NodeBinExpr *expr) const {
+HSharp::ValueInfo HSharpVE::VirtualEnvironment::ExpressionVisitor::operator()(HSharpParser::NodeBinExpr *expr) const {
     return std::visit(parent->binexprvisitor, expr->var);
 }
-HSharpVE::ValueInfo HSharpVE::VirtualEnvironment::TermVisitor::operator()(const HSharpParser::NodeTermIdent *term) const {
+HSharp::ValueInfo HSharpVE::VirtualEnvironment::TermVisitor::operator()(const HSharpParser::NodeTermIdent *term) const {
     if (!parent->is_variable(const_cast<char*>(term->ident.value.value().c_str()))){
         std::cerr << "Invalid identifier" << std::endl;
         exit(1);
@@ -54,7 +54,7 @@ HSharpVE::ValueInfo HSharpVE::VirtualEnvironment::TermVisitor::operator()(const 
             .dealloc_required = false
     };
 }
-HSharpVE::ValueInfo HSharpVE::VirtualEnvironment::TermVisitor::operator()(const HSharpParser::NodeTermIntLit *term) const {
+HSharp::ValueInfo HSharpVE::VirtualEnvironment::TermVisitor::operator()(const HSharpParser::NodeTermIntLit *term) const {
     if (!is_number(term->int_lit.value.value())) {
         std::cerr << "Expression is not valid integer!" << std::endl;
         exit(1);
@@ -66,7 +66,7 @@ HSharpVE::ValueInfo HSharpVE::VirtualEnvironment::TermVisitor::operator()(const 
             .line = term->line,
             .dealloc_required = true};
 }
-HSharpVE::ValueInfo HSharpVE::VirtualEnvironment::BinExprVisitor::operator()(const HSharpParser::NodeBinExprAdd *expr) const {
+HSharp::ValueInfo HSharpVE::VirtualEnvironment::BinExprVisitor::operator()(const HSharpParser::NodeBinExprAdd *expr) const {
     auto result = parent->integers_pool.malloc();
     ValueInfo lhs, rhs;
     if ((lhs = std::visit(parent->exprvisitor, expr->lhs->expr)).type != VariableType::INT)
@@ -82,7 +82,7 @@ HSharpVE::ValueInfo HSharpVE::VirtualEnvironment::BinExprVisitor::operator()(con
     parent->dispose_value(rhs);
     return ValueInfo{.type = VariableType::INT, .value = result, .dealloc_required = true};
 }
-HSharpVE::ValueInfo HSharpVE::VirtualEnvironment::BinExprVisitor::operator()(const HSharpParser::NodeBinExprSub *expr) const {
+HSharp::ValueInfo HSharpVE::VirtualEnvironment::BinExprVisitor::operator()(const HSharpParser::NodeBinExprSub *expr) const {
     auto result = parent->integers_pool.malloc();
     ValueInfo lhs, rhs;
     if ((lhs = std::visit(parent->exprvisitor, expr->lhs->expr)).type != VariableType::INT)
@@ -98,7 +98,7 @@ HSharpVE::ValueInfo HSharpVE::VirtualEnvironment::BinExprVisitor::operator()(con
     parent->dispose_value(rhs);
     return ValueInfo{.type = VariableType::INT, .value = result, .dealloc_required = true};
 }
-HSharpVE::ValueInfo HSharpVE::VirtualEnvironment::BinExprVisitor::operator()(const HSharpParser::NodeBinExprMul *expr) const {
+HSharp::ValueInfo HSharpVE::VirtualEnvironment::BinExprVisitor::operator()(const HSharpParser::NodeBinExprMul *expr) const {
     auto result = parent->integers_pool.malloc();
     ValueInfo lhs, rhs;
     if ((lhs = std::visit(parent->exprvisitor, expr->lhs->expr)).type != VariableType::INT)
@@ -114,7 +114,7 @@ HSharpVE::ValueInfo HSharpVE::VirtualEnvironment::BinExprVisitor::operator()(con
     parent->dispose_value(rhs);
     return ValueInfo{.type = VariableType::INT, .value = result, .dealloc_required = true};
 }
-HSharpVE::ValueInfo HSharpVE::VirtualEnvironment::BinExprVisitor::operator()(const HSharpParser::NodeBinExprDiv *expr) const {
+HSharp::ValueInfo HSharpVE::VirtualEnvironment::BinExprVisitor::operator()(const HSharpParser::NodeBinExprDiv *expr) const {
     auto result = parent->integers_pool.malloc();
     ValueInfo lhs, rhs;
     if ((lhs = std::visit(parent->exprvisitor, expr->lhs->expr)).type != VariableType::INT)
@@ -146,7 +146,7 @@ void HSharpVE::VirtualEnvironment::delete_var_value(HSharpVE::Variable &variable
                                 "Cannot delete value: invalid type");
     }
 }
-void* HSharpVE::VirtualEnvironment::allocate(HSharpVE::VariableType vtype) {
+void* HSharpVE::VirtualEnvironment::allocate(HSharp::VariableType vtype) {
     switch(vtype){
         case VariableType::INT:
             return integers_pool.malloc();

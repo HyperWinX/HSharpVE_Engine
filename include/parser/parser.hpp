@@ -5,7 +5,7 @@
 #include <vector>
 #include <variant>
 
-#include "nodes.hpp"
+#include <parser/nodes.hpp>
 #include <main/file.hpp>
 #include <arena_alloc/arena.hpp>
 #include <parser/tokens.hpp>

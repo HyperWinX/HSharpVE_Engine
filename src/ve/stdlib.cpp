@@ -4,7 +4,7 @@
 #include <parser/parser.hpp>
 #include <ve/ve.hpp>
 
-using HSharpVE::ValueInfo;
+using HSharp::ValueInfo;
 
 void HSharpVE::VirtualEnvironment::StatementVisitor_StatementPrint(HSharpParser::NodeStmtPrint* stmt) {
     ValueInfo pair = std::visit(exprvisitor, stmt->expr->expr);

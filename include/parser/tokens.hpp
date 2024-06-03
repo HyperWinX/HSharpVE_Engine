@@ -52,3 +52,5 @@ namespace HSharpParser{
         std::optional<std::string> value{};
     };
 }
+#undef DEFINE_ENUM_WITH_STRING_CONVERSIONS
+#undef X_DEFINE_ENUM_WITH_STRING_CONVERSIONS_TOSTRING_CASE
