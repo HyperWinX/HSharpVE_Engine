@@ -45,4 +45,10 @@ namespace HSharpParser{
 (TOK_DOT)\
 (TOK_IDENT)\
 (TOK_IF));
+
+    struct Token {
+        uint32_t line;
+        TokenType ttype{};
+        std::optional<std::string> value{};
+    };
 }
