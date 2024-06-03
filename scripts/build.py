@@ -71,6 +71,11 @@ def build(args: argparse.Namespace) -> None:
     if not os.path.exists(directory):
         print('build directory not found.')
         sys.exit(1)
+
+    cores = int(getattr(args, 'cores', None))
+    if not cores:
+        cores = multiprocessing.cpu_count()
+    print(f'running build with {cores} threads')
     
     for config in configs:
         print(f'running build command for config {config}...')
@@ -79,7 +84,7 @@ def build(args: argparse.Namespace) -> None:
                 '--build', 
                 f'{directory}/{config}', 
                 '-j', 
-                str(multiprocessing.cpu_count())
+                str(cores)
             ], encoding='UTF-8', stderr=subprocess.STDOUT
         )
 
@@ -117,6 +122,7 @@ def parse_cli_args() -> argparse.Namespace:
     parser.add_argument('--dir', action='store', dest='directory')
     parser.add_argument('--config', action='append', dest='config')
     parser.add_argument('--link', action='store_true', dest='link')
+    parser.add_argument('-j', action='store', dest='cores')
     return parser.parse_args()
 
 

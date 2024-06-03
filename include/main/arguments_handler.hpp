@@ -1,13 +1,16 @@
 #pragma once
 
+// STD
+#include <map>
 #include <memory>
 #include <vector>
 #include <ostream>
 #include <variant>
 #include <cstdint>
+#include <functional>
 
+// Local
 #include <version.hpp>
-#include <argparse/argparse.hpp>
 
 
 namespace hsharp {
@@ -30,7 +33,7 @@ namespace hsharp {
         EDirective::VERSION
     };
 
-    using ArgumentType = std::variant<std::string, EDirective, bool>;
+    using ArgumentType = std::variant<std::string, EDirective, bool, std::vector<std::string>>;
 
     // CLIRegistry keeps track of all flags, variables and directives
     // passed to compiler.
@@ -91,8 +94,59 @@ namespace hsharp {
         const CLIRegistry& registry() const;
 
     private:
-        void handleDirectives(argparse::ArgumentParser& parser, std::unique_ptr<CLIRegistry::IArgumentsAccessor>& accessor) noexcept;
-        void handleVariables(argparse::ArgumentParser& parser, std::unique_ptr<CLIRegistry::IArgumentsAccessor>& accessor) noexcept;
+
+        struct Token {
+            inline Token(int args, bool supportsShort)
+                : args(args)
+                , supportsShort(supportsShort)
+            {}
+
+            int args;
+            bool supportsShort;
+        };
+
+        class Parser {
+        public:
+            Parser();
+            void parse(const char* const* argv_, int argc_);
+            // optional is because we might have encountered error
+            const ArgumentType& access(const std::string& argument);
+
+        private:
+
+            /* FSM for CLI args.
+            Initial state -> flag -> (has args?) -> eat args -> flag -> ... (while non-empty)
+            |-----------> -> file |              -> flag -> ... (while non-empty)
+            \- eat files  <-------
+            */
+
+            const std::map<std::string, Token> matcher_ = {
+                std::make_pair("help", Token(0, true)),
+                std::make_pair("version", Token(0, true))
+            };
+
+            static constexpr int magicArgCount = -1;
+
+            // States of CLI Parser
+            enum class EExpectsNext : std::int_fast8_t {
+                ARGUMENT,
+                FLAG
+            } expectation_;
+
+            std::vector<std::string> eat_n(const char* const* tokens, int n, int max);
+            std::vector<std::string> eat_while(const char* const* tokens, int max, std::function<bool(const char*)> predicate);
+            void matchShortFlag(const char* token);
+            void matchLongFlag(const char* token);
+            void fallback(const std::string& message);
+            
+        private:
+            std::map<std::string, ArgumentType> args_;
+            std::string option_;
+            Token current_;
+        };
+
+        void handleDirectives(Parser& parser, std::unique_ptr<CLIRegistry::IArgumentsAccessor>& accessor) noexcept;
+        void handleVariables(Parser& parser, std::unique_ptr<CLIRegistry::IArgumentsAccessor>& accessor) noexcept;
 
     private:
         std::unique_ptr<const CLIRegistry> registry_;
