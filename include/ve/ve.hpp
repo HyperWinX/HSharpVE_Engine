@@ -6,6 +6,7 @@
 #include <boost/pool/pool.hpp>
 #include <boost/pool/object_pool.hpp>
 
+#include <visitors.hpp>
 #include <parser/parser.hpp>
 #include <ve/exceptions.hpp>
 
@@ -38,16 +39,14 @@ namespace HSharpVE {
 
     class VirtualEnvironment{
     private:
-        struct StatementVisitor {
-        private:
-            VirtualEnvironment* parent;
+        struct StatementVisitor : public HSharp::IStatementVisitor<VirtualEnvironment> {
         public:
             explicit StatementVisitor(VirtualEnvironment* parent) : parent(parent) {}
-            void operator()(NodeStmtInput* stmt) const;
-            void operator()(NodeStmtPrint* stmt) const;
-            void operator()(NodeStmtExit* stmt) const;
-            void operator()(NodeStmtVar* stmt) const;
-            void operator()(NodeStmtVarAssign* stmt) const;
+            void operator()(NodeStmtInput* stmt) const override;
+            void operator()(NodeStmtPrint* stmt) const override;
+            void operator()(NodeStmtExit* stmt) const override;
+            void operator()(NodeStmtVar* stmt) const override;
+            void operator()(NodeStmtVarAssign* stmt) const override;
         };
         struct ExpressionVisitor {
         private:
