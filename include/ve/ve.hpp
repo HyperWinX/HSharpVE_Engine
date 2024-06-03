@@ -30,7 +30,7 @@ namespace HSharpVE {
     struct Scope {
         std::unordered_map<std::string, Variable> variables;
     };
-    struct ValueInfo {
+    struct ValueInfo : HSharp::ValueInfo {
         VariableType type;
         void* value;
         uint32_t line;
@@ -39,23 +39,28 @@ namespace HSharpVE {
 
     class VirtualEnvironment{
     private:
-        struct StatementVisitor : public HSharp::IStatementVisitor<VirtualEnvironment> {
+        template<typename T>
+        struct StatementVisitor : public HSharp::IStatementVisitor {
+        private:
+            T* parent;
         public:
-            explicit StatementVisitor(VirtualEnvironment* parent) : parent(parent) {}
+            explicit StatementVisitor(T* parent) : parent(parent) {}
             void operator()(NodeStmtInput* stmt) const override;
             void operator()(NodeStmtPrint* stmt) const override;
             void operator()(NodeStmtExit* stmt) const override;
             void operator()(NodeStmtVar* stmt) const override;
             void operator()(NodeStmtVarAssign* stmt) const override;
         };
-        struct ExpressionVisitor {
+
+        template<typename T>
+        struct ExpressionVisitor : HSharp::IExpressionVisitor {
         private:
-            VirtualEnvironment* parent;
+            T* parent;
         public:
-            explicit ExpressionVisitor(VirtualEnvironment* parent) : parent(parent) {}
-            ValueInfo operator()(HSharpParser::NodeTerm* term) const;
-            ValueInfo operator()(const HSharpParser::NodeExpressionStrLit* expr) const;
-            ValueInfo operator()(HSharpParser::NodeBinExpr* expr) const;
+            explicit ExpressionVisitor(T* parent) : parent(parent) {}
+            ValueInfo operator()(HSharpParser::NodeTerm* term) const override;
+            ValueInfo operator()(const HSharpParser::NodeExpressionStrLit* expr) const override;
+            ValueInfo operator()(HSharpParser::NodeBinExpr* expr) const override;
         };
         struct TermVisitor {
         private:
