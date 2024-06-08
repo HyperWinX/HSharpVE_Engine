@@ -1,3 +1,0 @@
-[submodule "contrib/hpool"]
-	path = contrib/hpool
-	url = https://github.com/randommfs/HPool.git
