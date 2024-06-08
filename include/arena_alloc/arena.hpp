@@ -26,11 +26,15 @@ namespace HSharpParser {
         }
 
         template<typename T>
-        inline T* alloc() {
+        [[nodiscard]] inline T* alloc() {
             T* ptr = new(current_offset)T();
             current_offset += sizeof(T);
             return ptr;
         }
 
+        template<typename T, typename... Args>
+        [[nodiscard]] inline T* emplace(Args&&... args){
+            return new (alloc<T>()) T{std::forward<Args>(args)...};
+        }
     };
 }

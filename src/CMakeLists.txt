@@ -21,3 +21,5 @@ add_library(ve STATIC ${VE_SRC})
 
 target_include_directories(parser PUBLIC ${INCLUDE_DIR})
 target_include_directories(ve PUBLIC ${INCLUDE_DIR})
+
+target_link_libraries(ve PRIVATE parser)

@@ -1,22 +1,36 @@
-#include <cstdio>
-#include <cstdlib>
+// STD
+#include <iostream>
 
-#include <boost/algorithm/string.hpp>
+// local
+#include <ve/exceptions.hpp>
 
-#include <ve/ve.hpp>
+using namespace HSharpVE;
 
-using HSharpVE::ExceptionSource;
-using HSharpVE::ExceptionType;
-
-[[noreturn]] void throwFatalException(ExceptionSource source, ExceptionType type, const char* message){
-    fputs("\033[31;1m", stderr);
-    fputs(boost::to_upper_copy(std::format("[{}]: ", HSharpVE::ToString(source))).c_str(), stderr);
-    fputs(std::format("{}: ", HSharpVE::ToString(type)).c_str(), stderr);
-    fputs(message, stderr);
-    fputs("\033[0m\n", stderr);
-    exit(1);
+std::string HSharpVE::toString(EExceptionSource source) {
+    switch (source) {
+        HSHARP_ENUM_CASE(HSharpVE::EExceptionSource, PARSER);
+        HSHARP_ENUM_CASE(HSharpVE::EExceptionSource, UTILITY);
+        HSHARP_ENUM_CASE(HSharpVE::EExceptionSource, TOKENIZER);
+        HSHARP_ENUM_CASE(HSharpVE::EExceptionSource, VIRTUAL_ENV);
+        default: HSHARP_NOT_IMPLEMENTED(EExceptionSource::UTILITY, "enum value out of range");
+    }
 }
 
-[[noreturn]] void throwFatalException(ExceptionSource source, ExceptionType type, std::string& message) {
-    throwFatalException(source, type, message.c_str());
+std::string HSharpVE::toString(EExceptionReason reason) {
+    switch (reason) {
+        HSHARP_ENUM_CASE(HSharpVE::EExceptionReason, EARLY_EOF);
+        HSHARP_ENUM_CASE(HSharpVE::EExceptionReason, CAST_ERROR);
+        HSHARP_ENUM_CASE(HSharpVE::EExceptionReason, TYPE_ERROR);
+        HSHARP_ENUM_CASE(HSharpVE::EExceptionReason, SYNTAX_ERROR);
+        HSHARP_ENUM_CASE(HSharpVE::EExceptionReason, NOT_IMPLEMENTED);
+        HSHARP_ENUM_CASE(HSharpVE::EExceptionReason, UNEXPECTED_TOKEN);
+        default: HSHARP_NOT_IMPLEMENTED(EExceptionSource::UTILITY, "Enum value out of range");
+    }
+}
+
+[[noreturn]] void HSharpVE::error(EExceptionSource source, EExceptionReason reason, std::string_view message) {
+    std::cerr << RED << '[' << toString(source) << ']'
+              << ' ' << toString(reason) << ": " << message 
+              << RESET;
+    std::abort();
 }
