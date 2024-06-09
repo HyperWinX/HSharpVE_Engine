@@ -244,7 +244,7 @@ void hsharp::ArgumentsHandler::Parser::matchLongFlag(const char* token) {
     );
 
     if (lookup == matcher_.end()) {
-        fallback("could not match long option");
+        fallback(std::vformat("could not match long option: {}", std::make_format_args(token)));
     }
 
     option_ = lookup->first;

@@ -7,6 +7,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+find_package(GTest COMPONENTS gtest_main gmock)
+find_package(plog )
+
 set(INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 # Compilation flags
@@ -14,6 +17,7 @@ set(DEBUG_COMPILE_FLAGS "-Wall -O0 -ggdb3 -fsanitize=address -fsanitize=leak -fs
 set(DEBUG_LINKER_FLAGS )
 set(RELEASE_COMPILE_FLAGS "-Wall -O2 -fdata-sections -ffunction-sections -Wl --gc-sections")
 
+add_subdirectory(contrib)
 add_subdirectory(src)
 
 add_executable(hve-ng ${MAIN_SRC})
@@ -28,3 +32,5 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
     set(CMAKE_CXX_FLAGS ${RELEASE_COMPILE_FLAGS})
     add_custom_command(TARGET hve-ng COMMAND POST_BUILD strip -s hve-ng)
 endif()
+
+add_subdirectory(tests)

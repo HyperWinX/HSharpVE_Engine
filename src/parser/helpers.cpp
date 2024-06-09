@@ -4,19 +4,6 @@
 #include <ve/exceptions.hpp>
 #include <parser/tokens.hpp>
 
-[[nodiscard]] std::optional<char> HSharpParser::Tokenizer::peek(const int offset) const {
-    if (index + offset >= file.contents.value().size())
-        return {};
-    else
-        return file.contents.value().at(index + offset);
-}
-
-char HSharpParser::Tokenizer::consume() {
-    return file.contents.value().at(index++);
-}
-void HSharpParser::Tokenizer::skip(int count) {
-    index += count;
-}
 
 [[nodiscard]] std::optional<HSharpParser::Token> HSharpParser::Parser::peek(const int offset) const {
     if (index + offset >= tokens.size())
@@ -33,33 +20,31 @@ void HSharpParser::Parser::skip(int count) {
     index += count;
 }
 
-HSharpParser::Token HSharpParser::Parser::try_consume(TokenType type, int mode) {
-    if (peek().has_value() && peek().value().ttype == type)
+HSharpParser::Token HSharpParser::Parser::try_consume(HSharpParser::EToken type, int mode) {
+    if (peek().has_value() && peek().value().type == type)
         return consume();
     else {
         std::string msg{};
-        HSharpVE::ExceptionType exc_type;
+        HSharpVE::EExceptionReason exc_type;
         if (!peek().has_value()){
             msg.append(std::format("Unexpected EOF"));
-            exc_type = HSharpVE::EndOfFile;
+            exc_type = HSharpVE::EExceptionReason::EARLY_EOF;
         }
         else{
             msg.append(std::format( "Unexpected token type: {}, expected {}\n\tLine {}: {}\n",
-                                    HSharpParser::ToString(peek().value().ttype),
-                                    HSharpParser::ToString(type),
-                                    peek().value().line,
-                                    lines[peek().value().line - 1].c_str()));
-            exc_type = HSharpVE::UnexpectedToken;
+                                    HSharpParser::toString(peek().value().type),
+                                    HSharpParser::toString(type),
+                                    0,
+                                    0));
+            exc_type = HSharpVE::EExceptionReason::UNEXPECTED_TOKEN;
         }
-        throwFatalException(HSharpVE::ExceptionSource::Parser,
-                            exc_type,
-                            msg);
+        error(HSharpVE::EExceptionSource::PARSER, exc_type, msg);
         exit(1);
     }
 }
 
-std::optional<HSharpParser::Token> HSharpParser::Parser::try_consume(TokenType type) {
-    if (peek().has_value() && peek().value().ttype == type)
+std::optional<HSharpParser::Token> HSharpParser::Parser::try_consume(HSharpParser::EToken type) {
+    if (peek().has_value() && peek().value().type == type)
         return consume();
     else
         return {};
